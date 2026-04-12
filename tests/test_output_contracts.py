@@ -38,6 +38,8 @@ REPO_KEYS = {
     "summary",
     "stability",
     "extensions",
+    "include_globs",
+    "exclude_globs",
     "files",
 }
 

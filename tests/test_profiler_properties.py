@@ -51,3 +51,18 @@ def test_repository_discovery_respects_max_files(tmp_path: Path) -> None:
 
     result = profile_repository(tmp_path, extensions={".py"}, max_files=3)
     assert result.total_files == 3
+
+
+def test_repository_discovery_respects_include_exclude_globs(tmp_path: Path) -> None:
+    (tmp_path / "match.py").write_text("print('ok')\n", encoding="utf-8")
+    (tmp_path / "skip.py").write_text("print('skip')\n", encoding="utf-8")
+    (tmp_path / "note.txt").write_text("note\n", encoding="utf-8")
+
+    result = profile_repository(
+        tmp_path,
+        extensions={".py"},
+        include_globs=["*.py"],
+        exclude_globs=["skip.py"],
+    )
+    assert result.total_files == 1
+    assert result.results[0].script.endswith("match.py")

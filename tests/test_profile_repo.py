@@ -95,3 +95,32 @@ def test_profile_repo_json_with_runs_summary(tmp_path: Path, capsys) -> None:
     payload = json.loads(output.out)
     assert payload["runs"] == 3
     assert "summary" in payload
+
+
+def test_profile_repo_include_and_exclude_globs(tmp_path: Path, capsys) -> None:
+    (tmp_path / "keep.py").write_text("print('keep')\n", encoding="utf-8")
+    (tmp_path / "skip.py").write_text("print('skip')\n", encoding="utf-8")
+    (tmp_path / "other.js").write_text("console.log('x');\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "profile-repo",
+            "--root",
+            str(tmp_path),
+            "--ext",
+            ".py",
+            "--include-glob",
+            "*.py",
+            "--exclude-glob",
+            "skip.py",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["total_files"] == 1
+    assert payload["files"][0]["script"].endswith("keep.py")
+    assert payload["include_globs"] == ["*.py"]
+    assert payload["exclude_globs"] == ["skip.py"]
