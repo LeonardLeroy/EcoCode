@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
-from ecocode.commands import baseline, profile, profile_repo
+from ecocode.commands import baseline, profile, profile_repo, trend
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -16,6 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     profile.register(subparsers)
     profile_repo.register(subparsers)
     baseline.register(subparsers)
+    trend.register(subparsers)
 
     return parser
 
