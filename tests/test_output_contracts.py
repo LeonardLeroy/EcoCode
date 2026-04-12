@@ -7,6 +7,7 @@ from ecocode.cli import main
 
 
 PROFILE_KEYS = {
+    "schemaVersion",
     "script",
     "collector",
     "runs",
@@ -27,6 +28,7 @@ MEASUREMENT_KEYS = {
 
 
 REPO_KEYS = {
+    "schemaVersion",
     "root",
     "collector",
     "runs",
@@ -56,6 +58,7 @@ TREND_SUMMARY_KEYS = {
 
 
 BENCHMARK_KEYS = {
+    "schemaVersion",
     "fixtures_dir",
     "collector",
     "runs",
@@ -124,6 +127,7 @@ def test_baseline_compare_json_contract(tmp_path: Path, capsys) -> None:
     payload = json.loads(output.out)
 
     expected_keys = {
+        "schemaVersion",
         "baseline_path",
         "collector",
         "runs",
@@ -184,7 +188,7 @@ def test_trend_json_contract(tmp_path: Path, monkeypatch, capsys) -> None:
 
     assert exit_code == 0
     payload = json.loads(output.out)
-    assert set(payload.keys()) == {"history_dir", "summary", "points"}
+    assert set(payload.keys()) == {"schemaVersion", "history_dir", "summary", "points"}
     assert set(payload["summary"].keys()) == TREND_SUMMARY_KEYS
 
 

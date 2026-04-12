@@ -7,6 +7,7 @@ from ecocode.core.schemas import SchemaValidationError, validate_named_schema
 
 def test_profile_schema_accepts_minimal_payload() -> None:
     payload = {
+        "schemaVersion": 1,
         "script": "demo.py",
         "collector": "placeholder",
         "runs": 1,
@@ -20,6 +21,7 @@ def test_profile_schema_accepts_minimal_payload() -> None:
 
 def test_profile_schema_rejects_unknown_key() -> None:
     payload = {
+        "schemaVersion": 1,
         "script": "demo.py",
         "collector": "placeholder",
         "runs": 1,
@@ -36,6 +38,7 @@ def test_profile_schema_rejects_unknown_key() -> None:
 
 def test_repo_schema_rejects_bad_file_item_type() -> None:
     payload = {
+        "schemaVersion": 1,
         "root": "/tmp/repo",
         "collector": "placeholder",
         "runs": 1,
@@ -75,6 +78,7 @@ def test_repo_schema_rejects_bad_file_item_type() -> None:
 
 def test_trend_schema_accepts_empty_summary_points() -> None:
     payload = {
+        "schemaVersion": 1,
         "history_dir": "/tmp/.ecocode/history",
         "summary": {
             "count": 0,
@@ -93,6 +97,7 @@ def test_trend_schema_accepts_empty_summary_points() -> None:
 
 def test_benchmark_schema_accepts_valid_payload() -> None:
     payload = {
+        "schemaVersion": 1,
         "fixtures_dir": "/tmp/fixtures",
         "collector": "placeholder",
         "runs": 5,
