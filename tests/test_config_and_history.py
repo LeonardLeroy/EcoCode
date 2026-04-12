@@ -71,7 +71,7 @@ def test_baseline_compare_uses_config_threshold(tmp_path: Path, monkeypatch, cap
     (tmp_path / "ecocode.toml").write_text(
         """
 [baseline]
-energy_threshold_pct = 1000000.0
+energy_threshold_pct = 1000000000.0
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -99,4 +99,4 @@ energy_threshold_pct = 1000000.0
     output = capsys.readouterr()
 
     assert exit_code == 0
-    assert "Threshold (%):          1000000.0" in output.out
+    assert "Threshold (%):          1000000000.0" in output.out

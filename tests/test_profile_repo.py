@@ -46,3 +46,29 @@ def test_profile_repo_invalid_max_files(capsys) -> None:
 
     assert exit_code == 1
     assert "--max-files must be greater than 0" in output.out
+
+
+def test_profile_repo_writes_sarif(tmp_path: Path, capsys) -> None:
+    (tmp_path / "a.py").write_text("print('a')\n", encoding="utf-8")
+    sarif_path = tmp_path / "reports" / "ecocode.sarif"
+
+    exit_code = main(
+        [
+            "profile-repo",
+            "--root",
+            str(tmp_path),
+            "--ext",
+            ".py",
+            "--sarif-output",
+            str(sarif_path),
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    assert sarif_path.exists()
+    assert "SARIF written:" in output.out
+
+    payload = json.loads(sarif_path.read_text(encoding="utf-8"))
+    assert payload["version"] == "2.1.0"
+    assert payload["runs"][0]["tool"]["driver"]["name"] == "EcoCode"
