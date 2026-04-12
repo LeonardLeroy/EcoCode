@@ -26,6 +26,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
 - Runtime collection preview: `--collector runtime` (Linux/Unix-like)
 - Repeated-run mode for stability analysis: `--runs <n>`
+- Linux runtime collector samples process groups to include subprocess activity.
 
 ## Features
 
@@ -98,7 +99,7 @@ Examples:
 ### Reliability and Validation
 
 - The current metric engine is deterministic placeholder logic for workflow validation.
-- Runtime collector preview executes scripts and measures child process CPU/RSS via system usage data.
+- Runtime collector preview executes scripts and samples process-group CPU/RSS (Linux) for subprocess-aware measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.
