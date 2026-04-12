@@ -36,6 +36,7 @@ REPO_KEYS = {
     "total_energy_wh",
     "average_sustainability_score",
     "summary",
+    "stability",
     "extensions",
     "files",
 }
@@ -100,6 +101,7 @@ def test_baseline_compare_json_contract(tmp_path: Path, capsys) -> None:
         "status",
         "current",
         "current_statistics",
+        "stability",
     }
     assert set(payload.keys()) == expected_keys
     assert set(payload["current"].keys()) == MEASUREMENT_KEYS
