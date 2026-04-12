@@ -128,6 +128,230 @@ Examples:
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.
 
+## Command Outputs And Interpretation
+
+This section shows what each implemented command returns and how to interpret the values.
+
+### 1) `ecocode profile`
+
+Command:
+
+```bash
+ecocode profile path/to/script.py
+```
+
+Example text output:
+
+```text
+EcoCode profile report
+Script:               /workspace/path/to/script.py
+CPU time (s):         1.84
+Memory peak (MB):     76.2
+Estimated energy Wh:  0.357
+Sustainability score: 90/100
+```
+
+Interpretation:
+- `CPU time (s)`: effective CPU work consumed by the run. Lower is usually better.
+- `Memory peak (MB)`: peak memory footprint observed. Spikes here often indicate heavy allocations.
+- `Estimated energy Wh`: synthetic estimate from CPU and memory factors. Compare this across commits.
+- `Sustainability score`: convenience score (`0-100`), where higher means lighter resource usage.
+
+JSON variant:
+
+```bash
+ecocode profile path/to/script.py --runs 3 --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"script": "/workspace/path/to/script.py",
+	"collector": "runtime",
+	"runs": 3,
+	"cpu_seconds": 1.92,
+	"memory_mb": 80.3,
+	"estimated_energy_wh": 0.3755,
+	"sustainability_score": 89,
+	"summary": {
+		"estimated_energy_wh_mean": 0.3721,
+		"estimated_energy_wh_median": 0.3718,
+		"estimated_energy_wh_stddev": 0.0046,
+		"estimated_energy_wh_cv_pct": 1.236
+	}
+}
+```
+
+Interpretation tips:
+- Use `estimated_energy_wh_median` as the most stable baseline value.
+- Use `estimated_energy_wh_cv_pct` to detect noisy runs. High CV means low measurement stability.
+
+### 2) `ecocode baseline create`
+
+Command:
+
+```bash
+ecocode baseline create path/to/script.py -o .ecocode/baseline.json --runs 5
+```
+
+Example CLI output:
+
+```text
+Baseline created: /workspace/.ecocode/baseline.json
+```
+
+Example generated file (`.ecocode/baseline.json`):
+
+```json
+{
+	"version": 2,
+	"collector": "placeholder",
+	"runs": 5,
+	"baseline": {
+		"script": "/workspace/path/to/script.py",
+		"cpu_seconds": 1.8,
+		"memory_mb": 72.4,
+		"estimated_energy_wh": 0.3442,
+		"sustainability_score": 90
+	},
+	"statistics": {
+		"estimated_energy_wh_mean": 0.3451,
+		"estimated_energy_wh_median": 0.3442,
+		"estimated_energy_wh_stddev": 0.0031,
+		"cpu_seconds_median": 1.8,
+		"memory_mb_median": 72.4
+	}
+}
+```
+
+Interpretation:
+- This file is your reference snapshot. Keep it versioned for reproducible comparisons.
+- The median values in `statistics` are usually the best anchors for regression checks.
+
+### 3) `ecocode baseline compare`
+
+Command:
+
+```bash
+ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json --runs 5 --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"threshold_pct": 5.0,
+	"baseline_energy_wh": 0.3442,
+	"current_energy_wh": 0.3591,
+	"increase_pct": 4.3289,
+	"regression": false,
+	"status": "passed",
+	"stability": {
+		"max_energy_cv_pct": 35.0,
+		"unstable": false
+	}
+}
+```
+
+Interpretation:
+- `increase_pct > threshold_pct` means energy regression.
+- Exit code `2` means regression detected.
+- With `--fail-on-unstable`, exit code `3` means result quality is too noisy to trust.
+
+### 4) `ecocode profile-repo`
+
+Command:
+
+```bash
+ecocode profile-repo --root . --ext .py --runs 3 --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"root": "/workspace/repo",
+	"total_files": 12,
+	"total_cpu_seconds": 25.48,
+	"total_memory_mb": 932.4,
+	"total_energy_wh": 4.5692,
+	"average_sustainability_score": 86.25,
+	"summary": {
+		"total_energy_wh_mean": 4.6112,
+		"total_energy_wh_median": 4.5692,
+		"total_energy_wh_stddev": 0.0713,
+		"total_energy_wh_cv_pct": 1.546
+	}
+}
+```
+
+Interpretation:
+- `total_energy_wh` is the aggregate footprint of scanned files for one run.
+- `average_sustainability_score` is useful as a high-level health indicator across modules.
+- For CI gates, prefer `summary.total_energy_wh_median` over single-run totals.
+
+### 5) `ecocode benchmark`
+
+Command:
+
+```bash
+ecocode benchmark --fixtures-dir benchmarks/fixtures --runs 7 --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"fixtures_dir": "/workspace/benchmarks/fixtures",
+	"runs": 7,
+	"max_energy_cv_pct": 20.0,
+	"total_fixtures": 3,
+	"unstable_fixtures": 1,
+	"status": "unstable",
+	"summary": {
+		"energy_wh_mean": 0.1482,
+		"energy_wh_median": 0.1421,
+		"energy_wh_stddev": 0.0142,
+		"energy_wh_cv_pct": 9.582
+	}
+}
+```
+
+Interpretation:
+- This command measures reproducibility of benchmark fixtures.
+- `unstable_fixtures` tells you how many fixtures exceeded CV threshold.
+- With `--fail-on-unstable`, exit code `3` signals unstable benchmark quality.
+
+### 6) `ecocode trend`
+
+Command:
+
+```bash
+ecocode trend --command profile-repo --limit 20 --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"summary": {
+		"count": 20,
+		"first_energy_wh": 5.12,
+		"last_energy_wh": 4.58,
+		"min_energy_wh": 4.51,
+		"max_energy_wh": 5.2,
+		"delta_wh": -0.54,
+		"delta_pct": -10.55
+	}
+}
+```
+
+Interpretation:
+- `delta_wh` and `delta_pct` show progression between oldest and newest points.
+- Negative delta indicates improvement (less estimated energy), positive means drift/regression.
+- Use `--csv-output` when you want plotting in notebooks or dashboards.
+
 ## Repository Structure
 
 ```text
