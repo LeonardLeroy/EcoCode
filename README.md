@@ -188,7 +188,7 @@ Notes:
 - `optimize.max_patch_changes`: maximum number of edits a patch can apply before being rejected.
 - `optimize.llm.enabled`: enable local LLM suggestions as an optional layer on top of deterministic suggestions.
 - `optimize.llm.provider`: local provider backend (`none`, `ollama`).
-- `optimize.llm.model`: local model name used by the provider.
+- `optimize.llm.model`: local model name used by the provider (recommended: `qwen2.5-coder:7b` or better).
 - `optimize.llm.max_suggestions`: cap for LLM-proposed suggestions merged into output.
 - `optimize.llm.timeout_seconds`: timeout for local provider requests.
 
