@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ecocode.cli import main
+from ecocode.core.profiler import ProfileResult, _parse_tasklist_memory_mb, _profile_runtime
 
 
 def test_profile_runtime_collector_json_success(tmp_path: Path, capsys) -> None:
@@ -72,3 +73,29 @@ print("done")
 
     assert exit_code == 0
     assert '"cpu_seconds"' in output.out
+
+
+def test_tasklist_memory_parser() -> None:
+    line = '"python.exe","1234","Console","1","12,345 K"'
+    parsed = _parse_tasklist_memory_mb(line)
+    assert parsed is not None
+    assert parsed > 12.0
+
+
+def test_runtime_dispatches_windows_backend(monkeypatch, tmp_path: Path) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text("print('ok')\n", encoding="utf-8")
+
+    expected = ProfileResult(
+        script=str(script),
+        cpu_seconds=0.12,
+        memory_mb=10.0,
+        estimated_energy_wh=0.0384,
+        sustainability_score=99,
+    )
+
+    monkeypatch.setattr("ecocode.core.profiler.platform.system", lambda: "Windows")
+    monkeypatch.setattr("ecocode.core.profiler._profile_runtime_windows", lambda *args: expected)
+
+    result = _profile_runtime(script, cpu_energy_factor=0.07, memory_energy_factor=0.003)
+    assert result == expected

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import os
 import platform
-import resource
 import subprocess
 import sys
 import time
@@ -11,6 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean, median, pstdev
 from typing import Literal
+
+try:
+    import resource
+except ImportError:  # pragma: no cover - unavailable on Windows
+    resource = None
 
 CollectorType = Literal["placeholder", "runtime"]
 
@@ -102,9 +107,6 @@ def _profile_runtime(
     memory_energy_factor: float,
 ) -> ProfileResult:
     system = platform.system().lower()
-    if system not in {"linux", "darwin"}:
-        raise RuntimeError("Runtime collector currently supports Unix-like systems")
-
     command = _build_runtime_command(script_path)
 
     if system == "linux":
@@ -114,6 +116,24 @@ def _profile_runtime(
             cpu_energy_factor,
             memory_energy_factor,
         )
+
+    if system == "windows":
+        return _profile_runtime_windows(
+            script_path,
+            command,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
+
+    if system == "darwin":
+        return _profile_runtime_children_usage(
+            script_path,
+            command,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
+
+    raise RuntimeError("Runtime collector currently supports Linux, macOS, and Windows")
 
     return _profile_runtime_children_usage(
         script_path,
@@ -130,6 +150,9 @@ def _profile_runtime_children_usage(
     memory_energy_factor: float,
 ) -> ProfileResult:
     """Fallback runtime collector based on RUSAGE_CHILDREN aggregates."""
+
+    if resource is None:
+        raise RuntimeError("RUSAGE runtime collector is unavailable on this platform")
 
     usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
     started = time.perf_counter()
@@ -158,6 +181,111 @@ def _profile_runtime_children_usage(
 
     if cpu_seconds == 0.0:
         cpu_seconds = round(max(0.0001, ended - started), 4)
+
+    estimated_energy_wh = _estimate_energy_wh(
+        cpu_seconds,
+        memory_mb,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
+    score = _compute_sustainability_score(cpu_seconds, memory_mb)
+
+    return ProfileResult(
+        script=str(script_path),
+        cpu_seconds=cpu_seconds,
+        memory_mb=memory_mb,
+        estimated_energy_wh=estimated_energy_wh,
+        sustainability_score=score,
+    )
+
+
+def _parse_tasklist_memory_mb(tasklist_line: str) -> float | None:
+    """Parse a tasklist CSV line and return memory in MB if available."""
+
+    try:
+        columns = next(csv.reader([tasklist_line]))
+    except (csv.Error, StopIteration):
+        return None
+
+    columns = [part.strip().strip('"') for part in columns]
+    if len(columns) < 5:
+        return None
+
+    memory_text = columns[-1].upper().replace("K", "").replace(" ", "")
+    memory_text = memory_text.replace(",", "")
+    try:
+        memory_kb = float(memory_text)
+    except ValueError:
+        return None
+
+    return round(memory_kb / 1024.0, 6)
+
+
+def _read_windows_process_memory_mb(process_id: int) -> float:
+    """Read process working set from tasklist; returns 0.0 when unavailable."""
+
+    try:
+        completed = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {process_id}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return 0.0
+
+    if completed.returncode != 0:
+        return 0.0
+
+    output = (completed.stdout or "").strip()
+    if not output or output.startswith("INFO:"):
+        return 0.0
+
+    first_line = output.splitlines()[0]
+    parsed = _parse_tasklist_memory_mb(first_line)
+    if parsed is None:
+        return 0.0
+    return parsed
+
+
+def _profile_runtime_windows(
+    script_path: Path,
+    command: list[str],
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> ProfileResult:
+    """Windows runtime collector preview (single-process working-set sampling)."""
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except OSError as exc:
+        raise RuntimeError(f"Runtime execution failed: {exc}") from exc
+
+    started = time.perf_counter()
+    peak_memory_mb = 0.0
+
+    while process.poll() is None:
+        peak_memory_mb = max(peak_memory_mb, _read_windows_process_memory_mb(process.pid))
+        time.sleep(0.02)
+
+    stdout_text, stderr_text = process.communicate()
+    ended = time.perf_counter()
+
+    peak_memory_mb = max(peak_memory_mb, _read_windows_process_memory_mb(process.pid))
+
+    if process.returncode != 0:
+        stderr = (stderr_text or "").strip()
+        stdout = (stdout_text or "").strip()
+        details = stderr or stdout or f"exit code {process.returncode}"
+        raise RuntimeError(f"Runtime execution failed: {details}")
+
+    cpu_seconds = round(max(0.0001, ended - started), 6)
+    memory_mb = round(peak_memory_mb, 6)
 
     estimated_energy_wh = _estimate_energy_wh(
         cpu_seconds,
