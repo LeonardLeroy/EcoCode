@@ -12,6 +12,7 @@
 - Local run history and trend progression.
 - Reliability suite expanded (contracts, aggregation, properties, runtime behavior).
 - JSON schema validation enforced for `profile`, `baseline compare`, `profile-repo`, and `trend` outputs.
+- Benchmark reproducibility runner with fixture pack (`ecocode benchmark`).
 
 ### In Progress
 
@@ -20,18 +21,17 @@
 
 ### Next
 
-- Benchmark reproducibility protocol (fixtures + noise controls + acceptance criteria).
 - Windows runtime collector.
 - Linux cgroup-aware measurements.
 - GitHub Action prototype for CI integration.
 
 ## Priority Issues
 
-1. Add benchmark fixture pack and reproducibility runner (`N` runs, median, CV gates).
-2. Implement Windows runtime collector backend.
-3. Add Linux cgroup-aware metrics path for containerized workloads.
-4. Publish first GitHub Action to run profile-repo and upload SARIF.
-5. Define `schemaVersion` policy and compatibility tests for future payload evolution.
+1. Implement Windows runtime collector backend.
+2. Add Linux cgroup-aware metrics path for containerized workloads.
+3. Publish first GitHub Action to run profile-repo and upload SARIF.
+4. Define `schemaVersion` policy and compatibility tests for future payload evolution.
+5. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
 
 ## Current Delivery Snapshot
 
@@ -46,7 +46,7 @@
 - Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
-- Next: benchmark reproducibility hardening and external metrology validation.
+- Next: benchmark reproducibility hardening (noise controls + acceptance profiles) and external metrology validation.
 
 ## Phase 1 - The Core
 
@@ -101,7 +101,7 @@
 10. Add Windows-specific process collector.
 11. Add Linux cgroup-aware measurements.
 12. Add macOS collector.
-13. Add deterministic benchmark fixture pack.
+13. Done: Add deterministic benchmark fixture pack and reproducibility runner (`benchmark`).
 14. Done: Add SARIF output for CI tooling.
 15. Add GitHub Action prototype.
 16. Add static rules engine skeleton.

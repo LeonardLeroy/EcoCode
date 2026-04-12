@@ -19,6 +19,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode baseline create <script> -o <file>`
 	- `ecocode baseline compare <script> --baseline <file>`
 	- `ecocode profile-repo --root <path>`
+	- `ecocode benchmark --fixtures-dir <path>`
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
 - JSON outputs are validated against internal schemas before emission.
@@ -88,6 +89,17 @@ Examples:
 - `ecocode trend --command profile-repo --limit 20 --json`
 - `ecocode trend --csv-output .ecocode/reports/trend.csv`
 
+### Benchmark reproducibility
+
+- Run deterministic fixture scripts repeatedly and evaluate stability.
+- Reports median and coefficient of variation (CV) per fixture.
+- Returns exit code `3` with `--fail-on-unstable` when any fixture exceeds CV threshold.
+
+Examples:
+- `ecocode benchmark`
+- `ecocode benchmark --fixtures-dir benchmarks/fixtures --runs 7 --json`
+- `ecocode benchmark --collector runtime --runs 5 --max-energy-cv-pct 20 --fail-on-unstable`
+
 ### Audit history tracking
 
 - Save audit runs to a local history directory for progress tracking.
@@ -129,15 +141,22 @@ Examples:
 │   ├── cpp/
 │   ├── csharp/
 │   └── rust/
+├── benchmarks/
+│   └── fixtures/
+│       ├── cpu_loop_small.py
+│       ├── list_transform.py
+│       └── string_workload.py
 ├── src/ecocode/
 │   ├── __init__.py
 │   ├── cli.py
 │   ├── commands/
 │   │   ├── baseline.py
+│   │   ├── benchmark.py
 │   │   ├── profile.py
 │   │   ├── profile_repo.py
 │   │   └── trend.py
 │   └── core/
+│       ├── benchmark.py
 │       ├── config.py
 │       ├── history.py
 │       ├── profiler.py
