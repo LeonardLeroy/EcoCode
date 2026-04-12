@@ -22,12 +22,13 @@ Before opening a PR, contributors must validate that the project is healthy loca
    - `.venv/bin/python -m compileall src`
 4. Re-run the CLI quickly to catch obvious regressions:
    - `.venv/bin/ecocode --help`
-   - `.venv/bin/ecocode profile demo.py --json`
-   - `.venv/bin/ecocode profile demo.py --collector runtime --json`
-   - `.venv/bin/ecocode profile demo.py --collector runtime --runs 3 --json`
-   - `.venv/bin/ecocode profile demo.py --collector runtime --runs 3 --max-energy-cv-pct 30 --fail-on-unstable --json`
+   - `.venv/bin/ecocode profile path/to/script.py --json`
+   - `.venv/bin/ecocode profile path/to/script.py --collector runtime --json`
+   - `.venv/bin/ecocode profile path/to/script.py --collector runtime --runs 3 --json`
+   - `.venv/bin/ecocode profile path/to/script.py --collector runtime --runs 3 --max-energy-cv-pct 30 --fail-on-unstable --json`
    - `.venv/bin/ecocode profile-repo --root . --ext .py --include-glob "src/**/*.py" --exclude-glob "tests/*.py" --json`
    - For subprocess-heavy changes, add a small runtime smoke check that spawns a child process.
+   - Confirm JSON output still passes the internal schema checks for profile, baseline, repo, and trend commands.
 
 PRs should be opened only after these checks pass.
 

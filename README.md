@@ -149,6 +149,7 @@ Examples:
 │   ├── test_cli.py
 │   ├── test_config_and_history.py
 │   ├── test_profile_repo.py
+│   ├── test_schemas.py
 │   └── test_trend.py
 ├── CONTRIBUTING.md
 ├── pyproject.toml
@@ -218,7 +219,7 @@ Run tests:
 
 ## Multi-Platform and Multi-Language Strategy
 
-- Primary delivery now: Python reference CLI (fast iteration, contributor-friendly)
+- Primary delivery now: Python reference CLI
 - Next performance path: Rust collector engine
 - Ecosystem expansions: C++ and C# integration tracks
 - Platform support target:
