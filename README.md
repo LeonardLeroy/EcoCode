@@ -21,6 +21,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode profile-repo --root <path>`
 	- `ecocode benchmark --fixtures-dir <path>`
 	- `ecocode optimize suggest <script>`
+	- `ecocode optimize evaluate --baseline <file> --candidate <file>`
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
 - JSON outputs are validated against internal schemas before emission.
@@ -114,11 +115,13 @@ Examples:
 - Rule-based optimization suggestions for source files.
 - Works as deterministic fallback before local LLM integration.
 - Supports JSON output for CI/report pipelines.
+- Supports candidate evaluation against baseline gates (`optimize evaluate`).
 
 Examples:
 - `ecocode optimize suggest path/to/script.py`
 - `ecocode optimize suggest path/to/script.py --json`
 - `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
+- `ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json`
 
 ### Audit history tracking
 
@@ -429,6 +432,33 @@ Interpretation:
 - `confidence` is the rule confidence score (`0.0` to `1.0`).
 - This is intentionally deterministic for MVP and will later be augmented by local LLM proposals.
 
+### 8) `ecocode optimize evaluate`
+
+Command:
+
+```bash
+ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"schemaVersion": 1,
+	"command": "optimize evaluate",
+	"baseline_energy_wh": 0.3442,
+	"candidate_energy_wh": 0.331,
+	"increase_pct": -3.835,
+	"regression": false,
+	"status": "passed"
+}
+```
+
+Interpretation:
+- This command verifies whether a generated/refactored candidate improves or regresses versus baseline.
+- `regression=true` returns exit code `2`.
+- With `--fail-on-unstable`, unstable measurements return exit code `3`.
+
 ## Repository Structure
 
 ```text
@@ -454,6 +484,7 @@ Interpretation:
 │   ├── commands/
 │   │   ├── baseline.py
 │   │   ├── benchmark.py
+│   │   ├── optimize.py
 │   │   ├── profile.py
 │   │   ├── profile_repo.py
 │   │   └── trend.py
@@ -461,6 +492,7 @@ Interpretation:
 │       ├── benchmark.py
 │       ├── config.py
 │       ├── history.py
+│       ├── optimizer.py
 │       ├── profiler.py
 │       ├── repository_profiler.py
 │       ├── sarif.py

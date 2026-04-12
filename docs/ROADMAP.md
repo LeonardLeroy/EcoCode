@@ -19,6 +19,7 @@
 - `schemaVersion` policy with compatibility tests for JSON payloads.
 - Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
 - Optimizer MVP started with `ecocode optimize suggest` (rule-based deterministic mode).
+- Optimizer MVP includes `ecocode optimize evaluate` (candidate vs baseline regression gates).
 - Repository audit defaults expanded for major languages (Python, C/C++, C#, Rust, JS/TS, HTML/CSS, Assembly).
 
 ### In Progress
@@ -35,9 +36,9 @@
 
 1. Add configurable sampling interval for runtime collectors.
 2. Implement `ecocode optimize patch` (candidate generation from selected strategy).
-3. Implement `ecocode optimize evaluate` (candidate vs baseline with existing acceptance gates).
-4. Prepare local LLM integration path (model runner abstraction + prompt contracts).
-5. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
+3. Prepare local LLM integration path (model runner abstraction + prompt contracts).
+4. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
+5. Add language-specific optimization rule packs (Python/C++/Rust/JS/C#/HTML-CSS/ASM).
 
 ## Current Delivery Snapshot
 
