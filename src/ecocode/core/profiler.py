@@ -8,6 +8,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import mean, median, pstdev
 from typing import Literal
 
 CollectorType = Literal["placeholder", "runtime"]
@@ -20,6 +21,23 @@ class ProfileResult:
     memory_mb: float
     estimated_energy_wh: float
     sustainability_score: int
+
+
+@dataclass(slots=True)
+class ProfileStatistics:
+    runs: int
+    cpu_seconds_mean: float
+    cpu_seconds_median: float
+    cpu_seconds_stddev: float
+    memory_mb_mean: float
+    memory_mb_median: float
+    memory_mb_stddev: float
+    estimated_energy_wh_mean: float
+    estimated_energy_wh_median: float
+    estimated_energy_wh_stddev: float
+    sustainability_score_mean: float
+    sustainability_score_min: int
+    sustainability_score_max: int
 
 
 def _estimate_energy_wh(cpu_seconds: float, memory_mb: float) -> float:
@@ -122,3 +140,45 @@ def profile_script(
         return _profile_runtime(script_path)
 
     raise ValueError(f"Unsupported collector: {collector}")
+
+
+def profile_script_repeated(
+    script_path: Path,
+    collector: CollectorType = "placeholder",
+    runs: int = 1,
+) -> list[ProfileResult]:
+    if runs <= 0:
+        raise ValueError("runs must be greater than 0")
+
+    return [profile_script(script_path, collector=collector) for _ in range(runs)]
+
+
+def summarize_profile_runs(results: list[ProfileResult]) -> ProfileStatistics:
+    if not results:
+        raise ValueError("results must not be empty")
+
+    cpu_values = [result.cpu_seconds for result in results]
+    memory_values = [result.memory_mb for result in results]
+    energy_values = [result.estimated_energy_wh for result in results]
+    score_values = [result.sustainability_score for result in results]
+
+    def _stddev(values: list[float]) -> float:
+        if len(values) <= 1:
+            return 0.0
+        return round(pstdev(values), 6)
+
+    return ProfileStatistics(
+        runs=len(results),
+        cpu_seconds_mean=round(mean(cpu_values), 6),
+        cpu_seconds_median=round(median(cpu_values), 6),
+        cpu_seconds_stddev=_stddev(cpu_values),
+        memory_mb_mean=round(mean(memory_values), 6),
+        memory_mb_median=round(median(memory_values), 6),
+        memory_mb_stddev=_stddev(memory_values),
+        estimated_energy_wh_mean=round(mean(energy_values), 6),
+        estimated_energy_wh_median=round(median(energy_values), 6),
+        estimated_energy_wh_stddev=_stddev(energy_values),
+        sustainability_score_mean=round(mean(score_values), 6),
+        sustainability_score_min=min(score_values),
+        sustainability_score_max=max(score_values),
+    )

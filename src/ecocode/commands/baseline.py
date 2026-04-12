@@ -6,7 +6,11 @@ from pathlib import Path
 
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
-from ecocode.core.profiler import ProfileResult, profile_script
+from ecocode.core.profiler import (
+    ProfileResult,
+    profile_script_repeated,
+    summarize_profile_runs,
+)
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -37,6 +41,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         "--save-run",
         action="store_true",
         help="Save this audit result to the local history directory",
+    )
+    create_parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Repeat profiling multiple times and store summary",
     )
     create_parser.set_defaults(handler=handle_create)
 
@@ -72,6 +82,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         action="store_true",
         help="Save this audit result to the local history directory",
     )
+    compare_parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Repeat current profiling multiple times before compare",
+    )
     compare_parser.set_defaults(handler=handle_compare)
 
 
@@ -90,16 +106,36 @@ def handle_create(args: argparse.Namespace) -> int:
     output_path = Path(args.output).resolve()
     config = load_project_config(Path.cwd())
 
+    if args.runs <= 0:
+        print("--runs must be greater than 0")
+        return 1
+
     try:
-        result = profile_script(script_path, collector=args.collector)
+        results = profile_script_repeated(
+            script_path,
+            collector=args.collector,
+            runs=args.runs,
+        )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 
+    result = results[-1]
+    summary = summarize_profile_runs(results)
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "version": 1,
+        "version": 2,
+        "collector": args.collector,
+        "runs": args.runs,
         "baseline": _result_to_dict(result),
+        "statistics": {
+            "estimated_energy_wh_mean": summary.estimated_energy_wh_mean,
+            "estimated_energy_wh_median": summary.estimated_energy_wh_median,
+            "estimated_energy_wh_stddev": summary.estimated_energy_wh_stddev,
+            "cpu_seconds_median": summary.cpu_seconds_median,
+            "memory_mb_median": summary.memory_mb_median,
+        },
     }
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -124,11 +160,22 @@ def handle_compare(args: argparse.Namespace) -> int:
     baseline_path = Path(args.baseline).resolve()
     config = load_project_config(Path.cwd())
 
+    if args.runs <= 0:
+        print("--runs must be greater than 0")
+        return 1
+
     try:
-        current = profile_script(script_path, collector=args.collector)
+        current_runs = profile_script_repeated(
+            script_path,
+            collector=args.collector,
+            runs=args.runs,
+        )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
+
+    current = current_runs[-1]
+    current_summary = summarize_profile_runs(current_runs)
 
     if not baseline_path.exists() or not baseline_path.is_file():
         print(f"Baseline file not found: {baseline_path}")
@@ -137,8 +184,14 @@ def handle_compare(args: argparse.Namespace) -> int:
     baseline_data = json.loads(baseline_path.read_text(encoding="utf-8"))
     baseline = baseline_data.get("baseline", {})
 
-    baseline_energy = float(baseline.get("estimated_energy_wh", 0.0))
-    current_energy = float(current.estimated_energy_wh)
+    baseline_stats = baseline_data.get("statistics", {})
+    baseline_energy = float(
+        baseline_stats.get(
+            "estimated_energy_wh_median",
+            baseline.get("estimated_energy_wh", 0.0),
+        )
+    )
+    current_energy = float(current_summary.estimated_energy_wh_median)
 
     if baseline_energy <= 0:
         increase_pct = 0.0
@@ -154,6 +207,8 @@ def handle_compare(args: argparse.Namespace) -> int:
 
     response_payload = {
         "baseline_path": str(baseline_path),
+        "collector": args.collector,
+        "runs": args.runs,
         "threshold_pct": threshold_pct,
         "baseline_energy_wh": baseline_energy,
         "current_energy_wh": current_energy,
@@ -161,6 +216,13 @@ def handle_compare(args: argparse.Namespace) -> int:
         "regression": regression,
         "status": "failed" if regression else "passed",
         "current": _result_to_dict(current),
+        "current_statistics": {
+            "estimated_energy_wh_mean": current_summary.estimated_energy_wh_mean,
+            "estimated_energy_wh_median": current_summary.estimated_energy_wh_median,
+            "estimated_energy_wh_stddev": current_summary.estimated_energy_wh_stddev,
+            "cpu_seconds_median": current_summary.cpu_seconds_median,
+            "memory_mb_median": current_summary.memory_mb_median,
+        },
     }
 
     if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):

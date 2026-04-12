@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from statistics import mean, median, pstdev
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
@@ -47,6 +48,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Output machine-readable JSON",
     )
     parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Repeat repository profiling multiple times and summarize totals",
+    )
+    parser.add_argument(
         "--sarif-output",
         default=None,
         help="Write SARIF report to the given file path",
@@ -70,6 +77,9 @@ def handle(args: argparse.Namespace) -> int:
     if max_files <= 0:
         print("--max-files must be greater than 0")
         return 1
+    if args.runs <= 0:
+        print("--runs must be greater than 0")
+        return 1
 
     extensions = {
         ext if ext.startswith(".") else f".{ext}"
@@ -79,23 +89,42 @@ def handle(args: argparse.Namespace) -> int:
         extensions = set(DEFAULT_SCRIPT_EXTENSIONS)
 
     try:
-        result = profile_repository(
-            root=root,
-            extensions=extensions,
-            max_files=max_files,
-            collector=args.collector,
-        )
+        run_results = [
+            profile_repository(
+                root=root,
+                extensions=extensions,
+                max_files=max_files,
+                collector=args.collector,
+            )
+            for _ in range(args.runs)
+        ]
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 
+    result = run_results[-1]
+
+    total_energy_values = [item.total_energy_wh for item in run_results]
+    summary = {
+        "runs": args.runs,
+        "total_energy_wh_mean": round(mean(total_energy_values), 6),
+        "total_energy_wh_median": round(median(total_energy_values), 6),
+        "total_energy_wh_stddev": round(
+            pstdev(total_energy_values) if len(total_energy_values) > 1 else 0.0,
+            6,
+        ),
+    }
+
     payload = {
         "root": result.root,
+        "collector": args.collector,
+        "runs": args.runs,
         "total_files": result.total_files,
         "total_cpu_seconds": result.total_cpu_seconds,
         "total_memory_mb": result.total_memory_mb,
         "total_energy_wh": result.total_energy_wh,
         "average_sustainability_score": result.average_sustainability_score,
+        "summary": summary,
         "extensions": sorted(extensions),
         "files": [
             {
@@ -136,6 +165,10 @@ def handle(args: argparse.Namespace) -> int:
     print(f"Total memory peak (MB):   {result.total_memory_mb}")
     print(f"Total estimated Wh:       {result.total_energy_wh}")
     print(f"Average sustainability:   {result.average_sustainability_score}/100")
+    if args.runs > 1:
+        print(f"Runs:                     {args.runs}")
+        print(f"Energy median (Wh):       {summary['total_energy_wh_median']}")
+        print(f"Energy stddev (Wh):       {summary['total_energy_wh_stddev']}")
     if sarif_written_path is not None:
         print(f"SARIF written:            {sarif_written_path}")
 
