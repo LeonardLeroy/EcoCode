@@ -1,5 +1,38 @@
 # EcoCode Roadmap
 
+## Status Board
+
+### Done
+
+- Core CLI commands: `profile`, `baseline create/compare`, `profile-repo`, `trend`.
+- Output channels: human-readable, JSON, CSV (trend), SARIF (repo profiling).
+- Runtime collector preview on Linux/Unix with subprocess-aware process-group sampling.
+- Repeated-run mode with median/stddev/CV and stability gates.
+- Include/exclude glob filters for repository profiling.
+- Local run history and trend progression.
+- Reliability suite expanded (contracts, aggregation, properties, runtime behavior).
+
+### In Progress
+
+- Calibration and stability hardening (configurable factors and thresholds are in place).
+- Runtime collector quality improvements for cross-platform parity.
+
+### Next
+
+- JSON schema validation for all report outputs.
+- Benchmark reproducibility protocol (fixtures + noise controls + acceptance criteria).
+- Windows runtime collector.
+- Linux cgroup-aware measurements.
+- GitHub Action prototype for CI integration.
+
+## Priority Issues
+
+1. Define and enforce JSON schema for profile, baseline, repo, and trend outputs.
+2. Add benchmark fixture pack and reproducibility runner (`N` runs, median, CV gates).
+3. Implement Windows runtime collector backend.
+4. Add Linux cgroup-aware metrics path for containerized workloads.
+5. Publish first GitHub Action to run profile-repo and upload SARIF.
+
 ## Current Delivery Snapshot
 
 - Done: `ecocode profile <script>` with text and JSON output.
