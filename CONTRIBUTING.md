@@ -23,6 +23,7 @@ Before opening a PR, contributors must validate that the project is healthy loca
 4. Re-run the CLI quickly to catch obvious regressions:
    - `.venv/bin/ecocode --help`
    - `.venv/bin/ecocode profile demo.py --json`
+   - `.venv/bin/ecocode profile demo.py --collector runtime --json`
 
 PRs should be opened only after these checks pass.
 

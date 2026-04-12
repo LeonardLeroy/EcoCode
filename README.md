@@ -24,6 +24,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
+- Runtime collection preview: `--collector runtime` (Linux/Unix-like)
 
 ## Features
 
@@ -31,9 +32,11 @@ Phase 1 has started with a first functional Python CLI prototype.
 
 - Profile one script and get CPU, memory, estimated Wh, and sustainability score.
 - Supports JSON output for automation.
+- Supports collector selection: `--collector placeholder|runtime`.
 
 Examples:
 - `ecocode profile path/to/script.py`
+- `ecocode profile path/to/script.py --collector runtime`
 - `ecocode profile path/to/script.py --json`
 - `ecocode profile path/to/script.py --save-run`
 
@@ -45,6 +48,7 @@ Examples:
 
 Examples:
 - `ecocode baseline create path/to/script.py -o .ecocode/baseline.json`
+- `ecocode baseline create path/to/script.py -o .ecocode/baseline.json --collector runtime`
 - `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json`
 - `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json --energy-threshold-pct 5`
 
@@ -56,6 +60,7 @@ Examples:
 
 Examples:
 - `ecocode profile-repo --root .`
+- `ecocode profile-repo --root . --collector runtime`
 - `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
 - `ecocode profile-repo --root . --json --save-run`
 - `ecocode profile-repo --root . --sarif-output .ecocode/reports/ecocode.sarif`

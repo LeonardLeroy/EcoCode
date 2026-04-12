@@ -9,7 +9,8 @@
 - Done: SARIF export support via `profile-repo --sarif-output`.
 - Done: project configuration support through `ecocode.toml`.
 - Done: extended reliability suite (contracts, aggregation, and property tests).
-- Next: replace placeholder metrics with real runtime collectors.
+- Done: Linux/Unix runtime collector preview (`--collector runtime`).
+- Next: process-tree-aware runtime collector and calibration pipeline.
 
 ## Phase 1 - The Core
 
