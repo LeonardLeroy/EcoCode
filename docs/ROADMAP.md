@@ -23,6 +23,7 @@
 - Optimizer MVP includes `ecocode optimize patch` (deterministic candidate generation, Python-focused MVP).
 - Optimize policy is configurable via `ecocode.toml` (`[optimize]` allowlist, default rule, max patch changes).
 - Optimizer MVP includes `ecocode optimize evaluate` (candidate vs baseline regression gates).
+- Local LLM provider scaffold is available behind config (`[optimize.llm]`) with deterministic fallback.
 - Repository audit defaults expanded for major languages (Python, C/C++, C#, Rust, JS/TS, HTML/CSS, Assembly).
 
 ### In Progress
