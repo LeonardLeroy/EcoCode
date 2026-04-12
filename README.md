@@ -20,6 +20,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode baseline compare <script> --baseline <file>`
 	- `ecocode profile-repo --root <path>`
 	- `ecocode benchmark --fixtures-dir <path>`
+	- `ecocode optimize suggest <script>`
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
 - JSON outputs are validated against internal schemas before emission.
@@ -27,6 +28,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
+- Multi-language audit scope includes Python, C, C++, C#, Rust, JavaScript/TypeScript, HTML/CSS, and Assembly in repository scans.
 - Runtime collection preview: `--collector runtime` (Linux/macOS/Windows)
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
@@ -71,6 +73,7 @@ Examples:
 - Supports extension filters and max files limits.
 - Supports include/exclude path globs for tighter scan scopes.
 - Supports SARIF export for CI and code-scanning integrations.
+- Default discovery now covers common extensions for Python, C/C++, C#, Rust, JavaScript/TypeScript, HTML/CSS, and Assembly.
 
 Examples:
 - `ecocode profile-repo --root .`
@@ -105,6 +108,17 @@ Examples:
 - `ecocode benchmark --fixtures-dir benchmarks/fixtures --noise-profile cpu-bound --json`
 - `ecocode benchmark --collector runtime --runs 5 --max-energy-cv-pct 20 --fail-on-unstable`
 - `ecocode benchmark --max-suite-cv-pct 8 --max-unstable-fixtures 0 --fail-on-acceptance --json`
+
+### Optimizer suggestions (MVP)
+
+- Rule-based optimization suggestions for source files.
+- Works as deterministic fallback before local LLM integration.
+- Supports JSON output for CI/report pipelines.
+
+Examples:
+- `ecocode optimize suggest path/to/script.py`
+- `ecocode optimize suggest path/to/script.py --json`
+- `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
 
 ### Audit history tracking
 
@@ -380,6 +394,40 @@ Interpretation:
 - `delta_wh` and `delta_pct` show progression between oldest and newest points.
 - Negative delta indicates improvement (less estimated energy), positive means drift/regression.
 - Use `--csv-output` when you want plotting in notebooks or dashboards.
+
+### 7) `ecocode optimize suggest`
+
+Command:
+
+```bash
+ecocode optimize suggest path/to/script.py --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"schemaVersion": 1,
+	"command": "optimize suggest",
+	"script": "/workspace/path/to/script.py",
+	"suggestion_count": 2,
+	"suggestions": [
+		{
+			"rule_id": "PY001",
+			"title": "Prefer direct iteration over range(len())",
+			"impact": "medium",
+			"confidence": 0.84,
+			"language": "python"
+		}
+	]
+}
+```
+
+Interpretation:
+- `rule_id` identifies the optimization heuristic that fired.
+- `impact` is an estimated optimization potential (`low|medium|high`).
+- `confidence` is the rule confidence score (`0.0` to `1.0`).
+- This is intentionally deterministic for MVP and will later be augmented by local LLM proposals.
 
 ## Repository Structure
 

@@ -18,6 +18,8 @@
 - GitHub Action prototype for `profile-repo` with SARIF publication.
 - `schemaVersion` policy with compatibility tests for JSON payloads.
 - Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
+- Optimizer MVP started with `ecocode optimize suggest` (rule-based deterministic mode).
+- Repository audit defaults expanded for major languages (Python, C/C++, C#, Rust, JS/TS, HTML/CSS, Assembly).
 
 ### In Progress
 
@@ -27,16 +29,15 @@
 ### Next
 
 - Add configurable sampling interval for runtime collectors.
-- Add macOS process-tree-aware runtime collector path.
-- Start Optimizer MVP (`suggest`, `patch`, `evaluate`) on top of existing benchmark gates.
+- Expand Optimizer MVP (`patch`, `evaluate`) on top of existing benchmark gates.
 
 ## Priority Issues
 
 1. Add configurable sampling interval for runtime collectors.
-2. Add macOS process-tree-aware runtime collector path.
-3. Implement `ecocode optimize suggest` (rule-based recommendations + confidence score).
-4. Implement `ecocode optimize evaluate` (candidate vs baseline with existing acceptance gates).
-5. Prepare local LLM integration path (model runner abstraction + prompt contracts).
+2. Implement `ecocode optimize patch` (candidate generation from selected strategy).
+3. Implement `ecocode optimize evaluate` (candidate vs baseline with existing acceptance gates).
+4. Prepare local LLM integration path (model runner abstraction + prompt contracts).
+5. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
 
 ## Current Delivery Snapshot
 
@@ -100,6 +101,17 @@
 - Add local model provider interface (Ollama/llama.cpp compatible backends).
 - Start with small coding models for low VRAM environments, then scale up to larger models when hardware allows.
 - Add prompt/test harness to compare candidate quality and ensure reproducibility.
+
+## Platform Focus Note
+
+- macOS runtime collector parity is intentionally deferred for now.
+- Active focus remains Linux and Windows collectors plus cross-language static/repository auditing.
+
+## Language Coverage Track
+
+- Current high-priority language targets: Python, C, C++, C#, Rust, JavaScript, HTML/CSS, Assembly.
+- Repository audit should keep working even when runtime execution is language-limited.
+- Runtime execution remains strongest on Python/executable paths while optimizer and static tracks become language-agnostic.
 
 ## Parallel Tracks (cross-phase)
 
