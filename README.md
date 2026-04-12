@@ -21,6 +21,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode profile-repo --root <path>`
 	- `ecocode benchmark --fixtures-dir <path>`
 	- `ecocode optimize suggest <script>`
+	- `ecocode optimize patch <script>`
 	- `ecocode optimize evaluate --baseline <file> --candidate <file>`
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
@@ -147,7 +148,7 @@ Examples:
 Workflow:
 1. Create a baseline with `ecocode baseline create`.
 2. Inspect hotspots with `ecocode optimize suggest`.
-3. Apply a candidate change manually or with a later patch command.
+3. Generate a candidate with `ecocode optimize patch` (auto or with `--rule-id`).
 4. Verify improvement with `ecocode optimize evaluate`.
 5. Keep only candidates that improve energy/performance without failing regression gates.
 
@@ -155,10 +156,13 @@ Examples:
 - `ecocode optimize suggest path/to/script.py`
 - `ecocode optimize suggest path/to/script.py --json`
 - `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
+- `ecocode optimize patch path/to/script.py --json`
+- `ecocode optimize patch path/to/script.py --rule-id PY001 --output path/to/candidate.py --json`
 - `ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json`
 
 Notes:
 - `optimize suggest` is deterministic today, so the same file yields the same rule hits.
+- `optimize patch` currently applies safe deterministic Python strategies (MVP scope).
 - `optimize evaluate` compares candidate energy against the baseline median and applies stability gates.
 - The deterministic optimizer is the bridge to local LLMs later, because the validation path already exists.
 
@@ -471,7 +475,35 @@ Interpretation:
 - `confidence` is the rule confidence score (`0.0` to `1.0`).
 - This is intentionally deterministic for MVP and will later be augmented by local LLM proposals.
 
-### 8) `ecocode optimize evaluate`
+### 8) `ecocode optimize patch`
+
+Command:
+
+```bash
+ecocode optimize patch path/to/script.py --json
+```
+
+Example JSON excerpt:
+
+```json
+{
+	"schemaVersion": 1,
+	"command": "optimize patch",
+	"script": "/workspace/path/to/script.py",
+	"candidate_path": "/workspace/path/to/script.candidate.py",
+	"rule_id": "PY001",
+	"strategy_title": "Prefer direct iteration over range(len())",
+	"applied": true,
+	"changes_count": 1
+}
+```
+
+Interpretation:
+- Generates a candidate file that applies one selected deterministic strategy.
+- Use `--rule-id` to force a specific rule and `--output` to control destination path.
+- Current MVP patch engine is conservative and Python-focused.
+
+### 9) `ecocode optimize evaluate`
 
 Command:
 
@@ -625,3 +657,5 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed phases and a suggested initi
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If you run into bugs, spot potential fixes, or have feature ideas, you are encouraged to open an issue or submit a PR.

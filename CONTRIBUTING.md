@@ -2,6 +2,8 @@
 
 Thanks for considering a contribution to EcoCode.
 
+If you encounter a bug, have an improvement idea, or want a new feature, feel free to open a discussion or submit a PR. All constructive contributions are welcome.
+
 ## Development Setup (Python Core)
 
 1. Create and activate a virtual environment.
@@ -48,12 +50,3 @@ Use conventional commits:
 - `test: add coverage for baseline regression`
 - `docs: expand roadmap phase 2 milestones`
 
-## Issue Triage Labels
-
-Use these labels for consistency:
-- `good first issue`
-- `help wanted`
-- `phase:core`
-- `phase:workflow`
-- `phase:cloud`
-- `phase:ai`

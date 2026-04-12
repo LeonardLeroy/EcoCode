@@ -20,6 +20,7 @@
 - `schemaVersion` policy with compatibility tests for JSON payloads.
 - Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
 - Optimizer MVP started with `ecocode optimize suggest` (rule-based deterministic mode).
+- Optimizer MVP includes `ecocode optimize patch` (deterministic candidate generation, Python-focused MVP).
 - Optimizer MVP includes `ecocode optimize evaluate` (candidate vs baseline regression gates).
 - Repository audit defaults expanded for major languages (Python, C/C++, C#, Rust, JS/TS, HTML/CSS, Assembly).
 
@@ -30,14 +31,14 @@
 
 ### Next
 
-- Expand Optimizer MVP (`patch`, `evaluate`) on top of existing benchmark gates.
+- Expand Optimizer patch strategy coverage beyond initial Python-safe rules.
 
 ## Priority Issues
 
-1. Implement `ecocode optimize patch` (candidate generation from selected strategy).
-2. Prepare local LLM integration path (model runner abstraction + prompt contracts).
-3. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
-4. Add language-specific optimization rule packs (Python/C++/Rust/JS/C#/HTML-CSS/ASM).
+1. Prepare local LLM integration path (model runner abstraction + prompt contracts).
+2. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
+3. Add language-specific optimization rule packs (Python/C++/Rust/JS/C#/HTML-CSS/ASM).
+4. Expand deterministic patch strategies and safety checks for multi-language candidates.
 
 ## Current Delivery Snapshot
 
