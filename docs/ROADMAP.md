@@ -11,6 +11,7 @@
 - Include/exclude glob filters for repository profiling.
 - Local run history and trend progression.
 - Reliability suite expanded (contracts, aggregation, properties, runtime behavior).
+- JSON schema validation enforced for `profile`, `baseline compare`, `profile-repo`, and `trend` outputs.
 
 ### In Progress
 
@@ -19,7 +20,6 @@
 
 ### Next
 
-- JSON schema validation for all report outputs.
 - Benchmark reproducibility protocol (fixtures + noise controls + acceptance criteria).
 - Windows runtime collector.
 - Linux cgroup-aware measurements.
@@ -27,11 +27,11 @@
 
 ## Priority Issues
 
-1. Define and enforce JSON schema for profile, baseline, repo, and trend outputs.
-2. Add benchmark fixture pack and reproducibility runner (`N` runs, median, CV gates).
-3. Implement Windows runtime collector backend.
-4. Add Linux cgroup-aware metrics path for containerized workloads.
-5. Publish first GitHub Action to run profile-repo and upload SARIF.
+1. Add benchmark fixture pack and reproducibility runner (`N` runs, median, CV gates).
+2. Implement Windows runtime collector backend.
+3. Add Linux cgroup-aware metrics path for containerized workloads.
+4. Publish first GitHub Action to run profile-repo and upload SARIF.
+5. Define `schemaVersion` policy and compatibility tests for future payload evolution.
 
 ## Current Delivery Snapshot
 
@@ -91,7 +91,7 @@
 
 1. Done: Add `ecocode baseline create` command.
 2. Done: Add `ecocode baseline compare` command.
-3. Add JSON schema for profile report.
+3. Done: Add JSON schema for profile report.
 4. Done: Add CSV export.
 5. Done: Implement repeated-run median profile mode.
 6. Done: Add process tree profiling for subprocess-heavy scripts (Linux preview).

@@ -21,6 +21,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode profile-repo --root <path>`
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
+- JSON outputs are validated against internal schemas before emission.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
@@ -110,6 +111,7 @@ Examples:
 - Runtime collector preview executes scripts and samples process-group CPU/RSS (Linux) for subprocess-aware measurements.
 - Repeated runs expose mean/median/stddev and CV to gate unstable measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
+- Central schema validation enforces stable JSON payload structures across commands.
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.
 
@@ -141,6 +143,7 @@ Examples:
 │       ├── profiler.py
 │       ├── repository_profiler.py
 │       ├── sarif.py
+│       ├── schemas.py
 │       └── trend.py
 ├── tests/
 │   ├── test_cli.py
