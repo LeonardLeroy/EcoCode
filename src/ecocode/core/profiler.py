@@ -135,12 +135,99 @@ def _profile_runtime(
 
     raise RuntimeError("Runtime collector currently supports Linux, macOS, and Windows")
 
-    return _profile_runtime_children_usage(
-        script_path,
-        command,
-        cpu_energy_factor,
-        memory_energy_factor,
-    )
+
+def _parse_linux_cgroup_relative_path(proc_cgroup_text: str) -> str | None:
+    """Extract cgroup relative path from /proc/<pid>/cgroup content."""
+
+    for raw_line in proc_cgroup_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        # v2 format: 0::/path
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+
+        _, controllers, relative = parts
+        if controllers == "":
+            return relative
+
+    # v1 fallback: use first available hierarchy path.
+    for raw_line in proc_cgroup_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        return parts[2]
+
+    return None
+
+
+def _read_first_int_from_file(path: Path) -> int | None:
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, PermissionError, OSError):
+        return None
+
+    if not text:
+        return None
+
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def _read_linux_cgroup_memory_peak_mb(
+    process_id: int,
+    proc_root: Path = Path("/proc"),
+    sys_cgroup_root: Path = Path("/sys/fs/cgroup"),
+) -> float:
+    """Read cgroup memory peak/current usage for a process in MB.
+
+    Prefers cgroup v2 `memory.peak`, then `memory.current`. For v1 layouts, falls
+    back to `memory.max_usage_in_bytes` or `memory.usage_in_bytes`.
+    Returns 0.0 when cgroup data is unavailable.
+    """
+
+    proc_cgroup_path = proc_root / str(process_id) / "cgroup"
+    try:
+        proc_cgroup_text = proc_cgroup_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, PermissionError, OSError):
+        return 0.0
+
+    relative_path = _parse_linux_cgroup_relative_path(proc_cgroup_text)
+    if relative_path is None:
+        return 0.0
+
+    normalized_relative = relative_path.lstrip("/")
+    candidate_dirs = [
+        sys_cgroup_root / normalized_relative,
+        sys_cgroup_root / "memory" / normalized_relative,
+    ]
+
+    candidate_files = [
+        "memory.peak",
+        "memory.current",
+        "memory.max_usage_in_bytes",
+        "memory.usage_in_bytes",
+    ]
+
+    for directory in candidate_dirs:
+        for filename in candidate_files:
+            raw_value = _read_first_int_from_file(directory / filename)
+            if raw_value is None:
+                continue
+
+            if raw_value < 0:
+                continue
+
+            return round(raw_value / (1024.0 * 1024.0), 6)
+
+    return 0.0
 
 
 def _profile_runtime_children_usage(
@@ -375,11 +462,16 @@ def _profile_runtime_linux_process_group(
     start_ticks, start_rss_pages = _read_process_group_totals(process_group_id)
     last_observed_ticks = start_ticks
     peak_rss_pages = start_rss_pages
+    cgroup_peak_memory_mb = 0.0
 
     while process.poll() is None:
         current_ticks, current_rss_pages = _read_process_group_totals(process_group_id)
         last_observed_ticks = max(last_observed_ticks, current_ticks)
         peak_rss_pages = max(peak_rss_pages, current_rss_pages)
+        cgroup_peak_memory_mb = max(
+            cgroup_peak_memory_mb,
+            _read_linux_cgroup_memory_peak_mb(process.pid),
+        )
         time.sleep(0.02)
 
     stdout_text, stderr_text = process.communicate()
@@ -387,6 +479,7 @@ def _profile_runtime_linux_process_group(
     end_ticks, end_rss_pages = _read_process_group_totals(process_group_id)
     last_observed_ticks = max(last_observed_ticks, end_ticks)
     peak_rss_pages = max(peak_rss_pages, end_rss_pages)
+    cgroup_peak_memory_mb = max(cgroup_peak_memory_mb, _read_linux_cgroup_memory_peak_mb(process.pid))
 
     if process.returncode != 0:
         stderr = (stderr_text or "").strip()
@@ -400,7 +493,8 @@ def _profile_runtime_linux_process_group(
     if cpu_seconds == 0.0:
         cpu_seconds = 0.0001
 
-    memory_mb = round((peak_rss_pages * page_size) / (1024 * 1024), 6)
+    process_group_memory_mb = round((peak_rss_pages * page_size) / (1024 * 1024), 6)
+    memory_mb = max(process_group_memory_mb, cgroup_peak_memory_mb)
 
     estimated_energy_wh = _estimate_energy_wh(
         cpu_seconds,

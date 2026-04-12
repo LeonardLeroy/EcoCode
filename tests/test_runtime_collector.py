@@ -3,7 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from ecocode.cli import main
-from ecocode.core.profiler import ProfileResult, _parse_tasklist_memory_mb, _profile_runtime
+from ecocode.core.profiler import (
+    ProfileResult,
+    _parse_linux_cgroup_relative_path,
+    _parse_tasklist_memory_mb,
+    _profile_runtime,
+    _read_linux_cgroup_memory_peak_mb,
+)
 
 
 def test_profile_runtime_collector_json_success(tmp_path: Path, capsys) -> None:
@@ -99,3 +105,43 @@ def test_runtime_dispatches_windows_backend(monkeypatch, tmp_path: Path) -> None
 
     result = _profile_runtime(script, cpu_energy_factor=0.07, memory_energy_factor=0.003)
     assert result == expected
+
+
+def test_parse_linux_cgroup_relative_path_v2() -> None:
+    content = "0::/user.slice/app.slice/test.scope\n"
+    assert _parse_linux_cgroup_relative_path(content) == "/user.slice/app.slice/test.scope"
+
+
+def test_read_linux_cgroup_memory_peak_mb_v2(tmp_path: Path) -> None:
+    proc_root = tmp_path / "proc"
+    sys_root = tmp_path / "sys" / "fs" / "cgroup"
+    pid_dir = proc_root / "4242"
+    pid_dir.mkdir(parents=True, exist_ok=True)
+    (pid_dir / "cgroup").write_text("0::/demo.slice\n", encoding="utf-8")
+
+    cgroup_dir = sys_root / "demo.slice"
+    cgroup_dir.mkdir(parents=True, exist_ok=True)
+    # 8 MiB
+    (cgroup_dir / "memory.peak").write_text(str(8 * 1024 * 1024), encoding="utf-8")
+
+    value = _read_linux_cgroup_memory_peak_mb(
+        process_id=4242,
+        proc_root=proc_root,
+        sys_cgroup_root=sys_root,
+    )
+    assert value == 8.0
+
+
+def test_read_linux_cgroup_memory_peak_mb_returns_zero_when_missing(tmp_path: Path) -> None:
+    proc_root = tmp_path / "proc"
+    sys_root = tmp_path / "sys" / "fs" / "cgroup"
+    pid_dir = proc_root / "9999"
+    pid_dir.mkdir(parents=True, exist_ok=True)
+    (pid_dir / "cgroup").write_text("0::/missing.slice\n", encoding="utf-8")
+
+    value = _read_linux_cgroup_memory_peak_mb(
+        process_id=9999,
+        proc_root=proc_root,
+        sys_cgroup_root=sys_root,
+    )
+    assert value == 0.0
