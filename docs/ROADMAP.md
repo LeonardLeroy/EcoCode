@@ -16,6 +16,7 @@
 - Windows runtime collector backend preview.
 - Linux cgroup-aware measurements for runtime collector (container-aware memory path).
 - GitHub Action prototype for `profile-repo` with SARIF publication.
+- `schemaVersion` policy with compatibility tests for JSON payloads.
 
 ### In Progress
 
@@ -24,15 +25,15 @@
 
 ### Next
 
-- Schema compatibility policy (`schemaVersion`) and migration tests.
+- Benchmark noise-control profiles and acceptance thresholds.
 
 ## Priority Issues
 
-1. Define `schemaVersion` policy and compatibility tests for future payload evolution.
-2. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
-3. Add configurable sampling interval for runtime collectors.
-4. Add macOS process-tree-aware runtime collector path.
-5. Add static rules engine skeleton for early anti-pattern checks.
+1. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
+2. Add configurable sampling interval for runtime collectors.
+3. Add macOS process-tree-aware runtime collector path.
+4. Add static rules engine skeleton for early anti-pattern checks.
+5. Add baseline/result migration helpers for future schema upgrades.
 
 ## Current Delivery Snapshot
 
@@ -49,6 +50,7 @@
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
 - Done: Linux cgroup-aware memory sampling for containerized runtime contexts.
 - Done: GitHub Action prototype to run `profile-repo` and upload SARIF.
+- Done: `schemaVersion` policy and compatibility tests for JSON outputs.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
 - Next: benchmark reproducibility hardening (noise controls + acceptance profiles) and external metrology validation.
 

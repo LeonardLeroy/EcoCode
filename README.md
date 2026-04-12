@@ -23,6 +23,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
 - JSON outputs are validated against internal schemas before emission.
+- JSON outputs include `schemaVersion` for compatibility-safe evolution.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
@@ -139,6 +140,12 @@ Examples:
 	- runs `ecocode profile-repo --json --sarif-output ...`,
 	- uploads JSON + SARIF artifacts,
 	- attempts SARIF publication to GitHub code scanning.
+
+### Schema compatibility policy
+
+- All machine-readable command outputs include `schemaVersion`.
+- Current schema version is `1`.
+- Compatibility rule: new fields can be added in a backward-compatible way, while removals or semantic changes require a schema version bump and migration notes.
 
 ## Command Outputs And Interpretation
 
