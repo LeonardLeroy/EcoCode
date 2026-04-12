@@ -32,12 +32,37 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Multi-language audit scope includes Python, C, C++, C#, Rust, JavaScript/TypeScript, HTML/CSS, and Assembly in repository scans.
 - Repository profiling is extension-based, so it can audit mixed-language repos even when runtime execution support is narrower than static scanning.
 - Runtime collection preview: `--collector runtime` (Linux/Windows; macOS deferred for now)
+- Runtime collection sampling interval: `--sampling-interval <seconds>`
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
 - Linux runtime collector also samples cgroup memory usage (when available) for container-aware measurements.
 - Windows runtime collector preview samples process working-set memory for profiled scripts.
 - Calibration factors configurable via `ecocode.toml`.
 - Stability gate options: `--max-energy-cv-pct` and `--fail-on-unstable`.
+
+## Language Support Matrix
+
+The repository audit is extension-based, so it can already scan mixed-language repositories. Runtime execution is narrower today, and the optimizer starts with deterministic suggestions before a future local LLM.
+
+| Language | Repo audit | Runtime collector | Optimizer suggest | Notes |
+| --- | --- | --- | --- | --- |
+| Python | Yes | Yes | Yes | Strongest end-to-end support today. |
+| C | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
+| C++ | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
+| C# | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
+| Rust | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
+| JavaScript / TypeScript | Yes | Partial | Yes | Good for repo audits; runtime execution is not universal yet. |
+| HTML / CSS | Yes | No | Yes | Static audit only; optimizer can still flag patterns. |
+| Assembly | Yes | No | Yes | Static audit only; useful for repository scans and rule-based advice. |
+| Java | Yes | Partial | Planned | Repo scans are covered; runtime/optimizer maturity can improve later. |
+| Go | Yes | Partial | Planned | Repo scans are covered; runtime maturity depends on executable packaging. |
+| Ruby | Yes | Partial | Planned | Repo scans are covered; runtime maturity depends on executable packaging. |
+| Shell | Yes | Partial | Planned | Useful for repo profiling and scripts; runtime may vary by environment. |
+
+Legend:
+- `Yes`: supported in the current implementation.
+- `Partial`: supported in some cases, but not as a universal/runtime-native guarantee yet.
+- `No`: not a runtime target today, but still may be scanned as text if extension rules match.
 
 ## Features
 
@@ -51,6 +76,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 Examples:
 - `ecocode profile path/to/script.py`
 - `ecocode profile path/to/script.py --collector runtime`
+- `ecocode profile path/to/script.py --collector runtime --sampling-interval 0.01`
 - `ecocode profile path/to/script.py --collector runtime --runs 5 --json`
 - `ecocode profile path/to/script.py --collector runtime --runs 5 --max-energy-cv-pct 20 --fail-on-unstable --json`
 - `ecocode profile path/to/script.py --json`

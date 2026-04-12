@@ -15,6 +15,7 @@
 - Benchmark reproducibility runner with fixture pack (`ecocode benchmark`).
 - Windows runtime collector backend preview.
 - Linux cgroup-aware measurements for runtime collector (container-aware memory path).
+- Runtime collector sampling interval exposed through CLI and core profiler APIs.
 - GitHub Action prototype for `profile-repo` with SARIF publication.
 - `schemaVersion` policy with compatibility tests for JSON payloads.
 - Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
@@ -29,16 +30,14 @@
 
 ### Next
 
-- Add configurable sampling interval for runtime collectors.
 - Expand Optimizer MVP (`patch`, `evaluate`) on top of existing benchmark gates.
 
 ## Priority Issues
 
-1. Add configurable sampling interval for runtime collectors.
-2. Implement `ecocode optimize patch` (candidate generation from selected strategy).
-3. Prepare local LLM integration path (model runner abstraction + prompt contracts).
-4. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
-5. Add language-specific optimization rule packs (Python/C++/Rust/JS/C#/HTML-CSS/ASM).
+1. Implement `ecocode optimize patch` (candidate generation from selected strategy).
+2. Prepare local LLM integration path (model runner abstraction + prompt contracts).
+3. Add team-level optimization policy in config (`optimize` section with accepted risk/quality gates).
+4. Add language-specific optimization rule packs (Python/C++/Rust/JS/C#/HTML-CSS/ASM).
 
 ## Current Delivery Snapshot
 
