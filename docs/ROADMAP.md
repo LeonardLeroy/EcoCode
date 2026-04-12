@@ -1,5 +1,12 @@
 # EcoCode Roadmap
 
+## Current Delivery Snapshot
+
+- Done: `ecocode profile <script>` with text and JSON output.
+- Done: `ecocode baseline create` and `ecocode baseline compare`.
+- Done: `ecocode profile-repo --root <path>` for repository-wide aggregation.
+- Next: replace placeholder metrics with real runtime collectors.
+
 ## Phase 1 - The Core
 
 - CLI command set (`profile`, `baseline`, `compare`, `report`).
@@ -41,8 +48,8 @@
 
 ## Suggested Milestone Backlog
 
-1. Add `ecocode baseline create` command.
-2. Add `ecocode baseline compare` command.
+1. Done: Add `ecocode baseline create` command.
+2. Done: Add `ecocode baseline compare` command.
 3. Add JSON schema for profile report.
 4. Add CSV export.
 5. Implement repeated-run median profile mode.

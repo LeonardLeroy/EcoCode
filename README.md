@@ -15,6 +15,7 @@ The project starts with a robust CLI core and expands toward workflow integratio
 Phase 1 has started with a first functional Python CLI prototype.
 
 - Command available: `ecocode profile <script>`
+- Command available: `ecocode profile-repo --root <path>`
 - Output modes: human-readable and JSON (`--json`)
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
 
@@ -62,6 +63,8 @@ Run the profile prototype:
 ```bash
 ecocode profile path/to/script.py
 ecocode profile path/to/script.py --json
+ecocode profile-repo --root .
+ecocode profile-repo --root . --ext .py --json
 ```
 
 Run tests:
