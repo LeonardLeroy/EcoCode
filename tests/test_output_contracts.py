@@ -55,6 +55,38 @@ TREND_SUMMARY_KEYS = {
 }
 
 
+BENCHMARK_KEYS = {
+    "fixtures_dir",
+    "collector",
+    "runs",
+    "max_energy_cv_pct",
+    "total_fixtures",
+    "unstable_fixtures",
+    "status",
+    "summary",
+    "fixtures",
+}
+
+
+BENCHMARK_SUMMARY_KEYS = {
+    "energy_wh_mean",
+    "energy_wh_median",
+    "energy_wh_stddev",
+    "energy_wh_cv_pct",
+}
+
+
+BENCHMARK_FIXTURE_KEYS = {
+    "script",
+    "runs",
+    "energy_wh_mean",
+    "energy_wh_median",
+    "energy_wh_stddev",
+    "energy_wh_cv_pct",
+    "unstable",
+}
+
+
 def test_profile_json_contract(tmp_path: Path, capsys) -> None:
     script = tmp_path / "demo.py"
     script.write_text("print('hello')\n", encoding="utf-8")
@@ -154,3 +186,28 @@ def test_trend_json_contract(tmp_path: Path, monkeypatch, capsys) -> None:
     payload = json.loads(output.out)
     assert set(payload.keys()) == {"history_dir", "summary", "points"}
     assert set(payload["summary"].keys()) == TREND_SUMMARY_KEYS
+
+
+def test_benchmark_json_contract(tmp_path: Path, capsys) -> None:
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir(parents=True, exist_ok=True)
+    (fixtures / "a.py").write_text("print('a')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "benchmark",
+            "--fixtures-dir",
+            str(fixtures),
+            "--runs",
+            "2",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert set(payload.keys()) == BENCHMARK_KEYS
+    assert set(payload["summary"].keys()) == BENCHMARK_SUMMARY_KEYS
+    if payload["fixtures"]:
+        assert set(payload["fixtures"][0].keys()) == BENCHMARK_FIXTURE_KEYS

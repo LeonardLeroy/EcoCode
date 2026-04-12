@@ -89,3 +89,34 @@ def test_trend_schema_accepts_empty_summary_points() -> None:
     }
 
     validate_named_schema("trend_report", payload)
+
+
+def test_benchmark_schema_accepts_valid_payload() -> None:
+    payload = {
+        "fixtures_dir": "/tmp/fixtures",
+        "collector": "placeholder",
+        "runs": 5,
+        "max_energy_cv_pct": 35.0,
+        "total_fixtures": 2,
+        "unstable_fixtures": 0,
+        "status": "stable",
+        "summary": {
+            "energy_wh_mean": 0.12,
+            "energy_wh_median": 0.11,
+            "energy_wh_stddev": 0.01,
+            "energy_wh_cv_pct": 8.333333,
+        },
+        "fixtures": [
+            {
+                "script": "/tmp/fixtures/a.py",
+                "runs": 5,
+                "energy_wh_mean": 0.12,
+                "energy_wh_median": 0.11,
+                "energy_wh_stddev": 0.01,
+                "energy_wh_cv_pct": 8.333333,
+                "unstable": False,
+            }
+        ],
+    }
+
+    validate_named_schema("benchmark_report", payload)

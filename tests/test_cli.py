@@ -141,3 +141,35 @@ def test_baseline_create_and_compare_with_runs(tmp_path: Path, capsys) -> None:
     payload = json.loads(output.out)
     assert payload["runs"] == 3
     assert "current_statistics" in payload
+
+
+def test_benchmark_command_json_success(tmp_path: Path, capsys) -> None:
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    (fixtures_dir / "one.py").write_text("print('one')\n", encoding="utf-8")
+    (fixtures_dir / "two.py").write_text("print('two')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "benchmark",
+            "--fixtures-dir",
+            str(fixtures_dir),
+            "--runs",
+            "3",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["total_fixtures"] == 2
+    assert payload["runs"] == 3
+
+
+def test_benchmark_command_missing_fixtures_dir(capsys) -> None:
+    exit_code = main(["benchmark", "--fixtures-dir", "missing-dir", "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "fixtures directory not found" in output.out.lower()
