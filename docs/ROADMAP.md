@@ -54,7 +54,7 @@
 1. Done: Add `ecocode baseline create` command.
 2. Done: Add `ecocode baseline compare` command.
 3. Add JSON schema for profile report.
-4. Add CSV export.
+4. Done: Add CSV export.
 5. Implement repeated-run median profile mode.
 6. Add process tree profiling for subprocess-heavy scripts.
 7. Add configurable sampling interval.

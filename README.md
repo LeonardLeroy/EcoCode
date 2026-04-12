@@ -63,12 +63,13 @@ Examples:
 ### Trend analysis
 
 - Read saved audit history and summarize progression over time.
-- Supports command filter, limit, and JSON output.
+- Supports command filter, limit, JSON output, and CSV export.
 
 Examples:
 - `ecocode trend`
 - `ecocode trend --json`
 - `ecocode trend --command profile-repo --limit 20 --json`
+- `ecocode trend --csv-output .ecocode/reports/trend.csv`
 
 ### Audit history tracking
 
