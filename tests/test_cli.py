@@ -173,3 +173,52 @@ def test_benchmark_command_missing_fixtures_dir(capsys) -> None:
 
     assert exit_code == 1
     assert "fixtures directory not found" in output.out.lower()
+
+
+def test_benchmark_command_noise_profile_defaults(tmp_path: Path, capsys) -> None:
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    (fixtures_dir / "one.py").write_text("print('one')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "benchmark",
+            "--fixtures-dir",
+            str(fixtures_dir),
+            "--noise-profile",
+            "cpu-bound",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["noise_profile"] == "cpu-bound"
+    assert payload["runs"] == 9
+
+
+def test_benchmark_command_fail_on_acceptance(tmp_path: Path, capsys) -> None:
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    (fixtures_dir / "one.py").write_text("print('one')\n", encoding="utf-8")
+    (fixtures_dir / "two.py").write_text("print('two')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "benchmark",
+            "--fixtures-dir",
+            str(fixtures_dir),
+            "--runs",
+            "3",
+            "--max-suite-cv-pct",
+            "0",
+            "--fail-on-acceptance",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    payload = json.loads(output.out)
+    assert payload["status"] == "failed"
+    assert exit_code == 4
