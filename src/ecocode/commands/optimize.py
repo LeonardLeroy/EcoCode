@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import ast
 import argparse
+import difflib
 import json
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
-from ecocode.core.local_llm import fetch_local_llm_suggestions
+from ecocode.core.local_llm import (
+    fetch_local_llm_candidate_patch,
+    fetch_local_llm_suggestions,
+)
 from ecocode.core.optimizer import (
     generate_optimization_patch,
     merge_optimization_suggestions,
@@ -67,6 +72,11 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         "--overwrite",
         action="store_true",
         help="Overwrite output file if it already exists",
+    )
+    patch_parser.add_argument(
+        "--use-llm",
+        action="store_true",
+        help="Use local LLM to generate candidate patch instead of deterministic rules",
     )
     patch_parser.add_argument(
         "--json",
@@ -224,31 +234,94 @@ def handle_patch(args: argparse.Namespace) -> int:
         else _default_candidate_output_path(script_path)
     )
 
-    try:
-        result = generate_optimization_patch(
-            script_path=script_path,
-            output_path=output_path,
-            rule_id=args.rule_id,
-            overwrite=args.overwrite,
-            allowed_patch_rule_ids=config.optimize_allowed_patch_rule_ids,
-            default_patch_rule_id=config.optimize_default_patch_rule_id,
-            max_patch_changes=config.optimize_max_patch_changes,
-        )
-    except (FileNotFoundError, ValueError, UnicodeError) as exc:
-        print(str(exc))
-        return 1
+    if args.use_llm:
+        if not config.optimize_llm_enabled:
+            print("optimize patch --use-llm requires optimize.llm.enabled = true")
+            return 1
 
-    payload = {
-        "schemaVersion": CURRENT_SCHEMA_VERSION,
-        "command": "optimize patch",
-        "script": result.script,
-        "candidate_path": result.candidate_path,
-        "rule_id": result.rule_id,
-        "strategy_title": result.strategy_title,
-        "applied": result.applied,
-        "changes_count": result.changes_count,
-        "diff": result.diff,
-    }
+        try:
+            original_source = script_path.read_text(encoding="utf-8", errors="replace")
+            candidate_source, strategy_title = fetch_local_llm_candidate_patch(
+                script_path=script_path,
+                provider=config.optimize_llm_provider,
+                model=config.optimize_llm_model,
+                timeout_seconds=config.optimize_llm_timeout_seconds,
+            )
+            if candidate_source.strip() == original_source.strip():
+                print("Local LLM produced no source change")
+                return 1
+
+            ast.parse(candidate_source)
+
+            if output_path.exists() and not args.overwrite:
+                print(f"Candidate file already exists: {output_path}")
+                return 1
+
+            diff_lines = list(
+                difflib.unified_diff(
+                    original_source.splitlines(),
+                    candidate_source.splitlines(),
+                    fromfile=str(script_path),
+                    tofile=str(output_path),
+                    lineterm="",
+                )
+            )
+            changes_count = sum(
+                1
+                for line in diff_lines
+                if (line.startswith("+") or line.startswith("-"))
+                and not line.startswith("+++")
+                and not line.startswith("---")
+            )
+            if changes_count > config.optimize_max_patch_changes:
+                print(
+                    f"Patch for rule LLM001 exceeds max_patch_changes={config.optimize_max_patch_changes}"
+                )
+                return 1
+
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(candidate_source, encoding="utf-8")
+
+            payload = {
+                "schemaVersion": CURRENT_SCHEMA_VERSION,
+                "command": "optimize patch",
+                "script": str(script_path),
+                "candidate_path": str(output_path),
+                "rule_id": "LLM001",
+                "strategy_title": strategy_title,
+                "applied": True,
+                "changes_count": changes_count,
+                "diff": "\n".join(diff_lines),
+            }
+        except (FileNotFoundError, RuntimeError, ValueError, UnicodeError, OSError, SyntaxError, json.JSONDecodeError) as exc:
+            print(str(exc))
+            return 1
+    else:
+        try:
+            result = generate_optimization_patch(
+                script_path=script_path,
+                output_path=output_path,
+                rule_id=args.rule_id,
+                overwrite=args.overwrite,
+                allowed_patch_rule_ids=config.optimize_allowed_patch_rule_ids,
+                default_patch_rule_id=config.optimize_default_patch_rule_id,
+                max_patch_changes=config.optimize_max_patch_changes,
+            )
+        except (FileNotFoundError, ValueError, UnicodeError) as exc:
+            print(str(exc))
+            return 1
+
+        payload = {
+            "schemaVersion": CURRENT_SCHEMA_VERSION,
+            "command": "optimize patch",
+            "script": result.script,
+            "candidate_path": result.candidate_path,
+            "rule_id": result.rule_id,
+            "strategy_title": result.strategy_title,
+            "applied": result.applied,
+            "changes_count": result.changes_count,
+            "diff": result.diff,
+        }
 
     try:
         validate_named_schema("optimize_patch_report", payload)
@@ -261,14 +334,14 @@ def handle_patch(args: argparse.Namespace) -> int:
         return 0
 
     print("EcoCode optimize patch")
-    print(f"Script:                 {result.script}")
-    print(f"Candidate file:         {result.candidate_path}")
-    print(f"Rule:                   {result.rule_id}")
-    print(f"Strategy:               {result.strategy_title}")
-    print(f"Applied changes:        {result.changes_count}")
-    if result.diff:
+    print(f"Script:                 {payload['script']}")
+    print(f"Candidate file:         {payload['candidate_path']}")
+    print(f"Rule:                   {payload['rule_id']}")
+    print(f"Strategy:               {payload['strategy_title']}")
+    print(f"Applied changes:        {payload['changes_count']}")
+    if payload["diff"]:
         print("Diff preview:")
-        print(result.diff)
+        print(payload["diff"])
     return 0
 
 

@@ -111,6 +111,66 @@ def fetch_local_llm_suggestions(
     return suggestions
 
 
+def fetch_local_llm_candidate_patch(
+    script_path: Path,
+    provider: str,
+    model: str,
+    timeout_seconds: float,
+) -> tuple[str, str]:
+    normalized_provider = provider.strip().lower()
+    if normalized_provider in {"", "none"}:
+        raise ValueError("Local LLM provider is disabled by configuration")
+    if normalized_provider != "ollama":
+        raise ValueError(f"Unsupported local LLM provider: {provider}")
+
+    resolved_model = resolve_ollama_model(model, timeout_seconds=timeout_seconds)
+    source = script_path.read_text(encoding="utf-8", errors="replace")
+
+    payload = {
+        "model": resolved_model,
+        "stream": False,
+        "format": "json",
+        "prompt": (
+            "You are a code optimization assistant. "
+            "Return strict JSON only with this shape: "
+            "{\"strategy_title\":\"...\",\"candidate_source\":\"...\"}. "
+            "Preserve behavior and output full candidate source text."
+            f"\n\nSOURCE:\n{source}"
+        ),
+    }
+
+    request = Request(
+        "http://127.0.0.1:11434/api/generate",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            response_payload = json.loads(response.read().decode("utf-8"))
+    except URLError as exc:
+        raise RuntimeError(f"Failed to reach local LLM provider: {exc}") from exc
+
+    raw_response = str(response_payload.get("response", "")).strip()
+    if not raw_response:
+        raise ValueError("Local LLM returned an empty candidate patch response")
+
+    parsed = json.loads(raw_response)
+    if not isinstance(parsed, dict):
+        raise ValueError("Local LLM candidate response must be a JSON object")
+
+    candidate_source = str(parsed.get("candidate_source", ""))
+    if not candidate_source.strip():
+        raise ValueError("Local LLM candidate response did not include candidate_source")
+
+    strategy_title = str(parsed.get("strategy_title", "LLM behavior-preserving optimization")).strip()
+    if not strategy_title:
+        strategy_title = "LLM behavior-preserving optimization"
+
+    return candidate_source, strategy_title
+
+
 def resolve_ollama_model(requested_model: str, timeout_seconds: float) -> str:
     normalized_requested = requested_model.strip().lower()
 

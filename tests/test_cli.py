@@ -370,3 +370,51 @@ def test_optimize_patch_py002_rule_success(tmp_path: Path, capsys) -> None:
     assert "_result_parts = []" in candidate_source
     assert ".append('x')" in candidate_source
     assert "result = ''.join(_result_parts)" in candidate_source
+
+
+def test_optimize_patch_use_llm_requires_llm_enabled(tmp_path: Path, monkeypatch, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text("print('ok')\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main(["optimize", "patch", str(script), "--use-llm", "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "optimize patch --use-llm requires optimize.llm.enabled = true" in output.out
+
+
+def test_optimize_patch_use_llm_json_success(tmp_path: Path, monkeypatch, capsys) -> None:
+    (tmp_path / "ecocode.toml").write_text(
+        """
+[optimize]
+max_patch_changes = 50
+
+[optimize.llm]
+enabled = true
+provider = "ollama"
+model = "qwen2.5-coder:7b"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    script = tmp_path / "demo.py"
+    script.write_text("print('hello')\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "ecocode.commands.optimize.fetch_local_llm_candidate_patch",
+        lambda **kwargs: ("print('hello world')\n", "LLM rewrite"),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main(["optimize", "patch", str(script), "--use-llm", "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["command"] == "optimize patch"
+    assert payload["rule_id"] == "LLM001"
+    assert payload["strategy_title"] == "LLM rewrite"
+    candidate_source = Path(payload["candidate_path"]).read_text(encoding="utf-8")
+    assert "hello world" in candidate_source
