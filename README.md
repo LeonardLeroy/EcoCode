@@ -158,11 +158,13 @@ Examples:
 - `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
 - `ecocode optimize patch path/to/script.py --json`
 - `ecocode optimize patch path/to/script.py --rule-id PY001 --output path/to/candidate.py --json`
+- `ecocode optimize patch path/to/script.py --use-llm --json`
 - `ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json`
 
 Notes:
 - `optimize suggest` is deterministic today, so the same file yields the same rule hits.
 - `optimize patch` currently applies safe deterministic Python strategies (MVP scope).
+- `optimize patch --use-llm` can generate a local-model candidate patch when `[optimize.llm]` is enabled.
 - `optimize evaluate` compares candidate energy against the baseline median and applies stability gates.
 - The deterministic optimizer is the bridge to local LLMs later, because the validation path already exists.
 
