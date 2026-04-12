@@ -63,8 +63,29 @@ Run the profile prototype:
 ```bash
 ecocode profile path/to/script.py
 ecocode profile path/to/script.py --json
+ecocode profile path/to/script.py --save-run
 ecocode profile-repo --root .
 ecocode profile-repo --root . --ext .py --json
+ecocode profile-repo --root . --save-run
+
+ecocode baseline create path/to/script.py -o .ecocode/baseline.json --save-run
+ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json
+
+```
+
+Optional project configuration (`ecocode.toml`):
+
+```toml
+[history]
+enabled = true
+auto_save = false
+dir = ".ecocode/history"
+
+[baseline]
+energy_threshold_pct = 5.0
+
+[profile_repo]
+max_files = 50
 ```
 
 Run tests:
