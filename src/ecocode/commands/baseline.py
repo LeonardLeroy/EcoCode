@@ -88,6 +88,17 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         default=1,
         help="Repeat current profiling multiple times before compare",
     )
+    compare_parser.add_argument(
+        "--max-energy-cv-pct",
+        type=float,
+        default=None,
+        help="Maximum allowed coefficient of variation (%%) for energy over runs",
+    )
+    compare_parser.add_argument(
+        "--fail-on-unstable",
+        action="store_true",
+        help="Return non-zero if run variability exceeds stability threshold",
+    )
     compare_parser.set_defaults(handler=handle_compare)
 
 
@@ -115,6 +126,8 @@ def handle_create(args: argparse.Namespace) -> int:
             script_path,
             collector=args.collector,
             runs=args.runs,
+            cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
+            memory_energy_factor=config.calibration_memory_wh_per_mb,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
@@ -169,6 +182,8 @@ def handle_compare(args: argparse.Namespace) -> int:
             script_path,
             collector=args.collector,
             runs=args.runs,
+            cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
+            memory_energy_factor=config.calibration_memory_wh_per_mb,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
@@ -176,6 +191,24 @@ def handle_compare(args: argparse.Namespace) -> int:
 
     current = current_runs[-1]
     current_summary = summarize_profile_runs(current_runs)
+    current_energy_cv_pct = 0.0
+    if current_summary.estimated_energy_wh_mean > 0:
+        current_energy_cv_pct = round(
+            (
+                current_summary.estimated_energy_wh_stddev
+                / current_summary.estimated_energy_wh_mean
+            )
+            * 100.0,
+            6,
+        )
+
+    stability_threshold = args.max_energy_cv_pct
+    if stability_threshold is None:
+        stability_threshold = config.stability_max_energy_cv_pct
+    if stability_threshold < 0:
+        print("--max-energy-cv-pct must be greater than or equal to 0")
+        return 1
+    unstable = args.runs > 1 and current_energy_cv_pct > stability_threshold
 
     if not baseline_path.exists() or not baseline_path.is_file():
         print(f"Baseline file not found: {baseline_path}")
@@ -220,8 +253,13 @@ def handle_compare(args: argparse.Namespace) -> int:
             "estimated_energy_wh_mean": current_summary.estimated_energy_wh_mean,
             "estimated_energy_wh_median": current_summary.estimated_energy_wh_median,
             "estimated_energy_wh_stddev": current_summary.estimated_energy_wh_stddev,
+            "estimated_energy_wh_cv_pct": current_energy_cv_pct,
             "cpu_seconds_median": current_summary.cpu_seconds_median,
             "memory_mb_median": current_summary.memory_mb_median,
+        },
+        "stability": {
+            "max_energy_cv_pct": stability_threshold,
+            "unstable": unstable,
         },
     }
 
@@ -235,6 +273,8 @@ def handle_compare(args: argparse.Namespace) -> int:
 
     if args.json:
         print(json.dumps(response_payload, indent=2))
+        if args.fail_on_unstable and unstable:
+            return 3
         return exit_code
 
     print("EcoCode baseline comparison")
@@ -243,6 +283,13 @@ def handle_compare(args: argparse.Namespace) -> int:
     print(f"Current energy Wh:      {current_energy}")
     print(f"Energy increase (%):    {round(increase_pct, 4)}")
     print(f"Threshold (%):          {threshold_pct}")
+    if args.runs > 1:
+        print(f"Energy CV (%):          {current_energy_cv_pct}")
+        print(f"Stability limit (%):    {stability_threshold}")
+        if unstable:
+            print("Stability:              UNSTABLE")
+            if args.fail_on_unstable:
+                return 3
 
     if regression:
         print("Status:                 FAILED (energy regression detected)")

@@ -33,6 +33,17 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Repeat profiling multiple times and summarize results",
     )
     parser.add_argument(
+        "--max-energy-cv-pct",
+        type=float,
+        default=None,
+        help="Maximum allowed coefficient of variation (%%) for energy over runs",
+    )
+    parser.add_argument(
+        "--fail-on-unstable",
+        action="store_true",
+        help="Return non-zero if run variability exceeds stability threshold",
+    )
+    parser.add_argument(
         "--save-run",
         action="store_true",
         help="Save this audit result to the local history directory",
@@ -53,6 +64,8 @@ def handle(args: argparse.Namespace) -> int:
             script_path,
             collector=args.collector,
             runs=args.runs,
+            cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
+            memory_energy_factor=config.calibration_memory_wh_per_mb,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
@@ -60,6 +73,20 @@ def handle(args: argparse.Namespace) -> int:
 
     result = results[-1]
     summary = summarize_profile_runs(results)
+    energy_cv_pct = 0.0
+    if summary.estimated_energy_wh_mean > 0:
+        energy_cv_pct = round(
+            (summary.estimated_energy_wh_stddev / summary.estimated_energy_wh_mean) * 100.0,
+            6,
+        )
+
+    stability_threshold = args.max_energy_cv_pct
+    if stability_threshold is None:
+        stability_threshold = config.stability_max_energy_cv_pct
+    if stability_threshold < 0:
+        print("--max-energy-cv-pct must be greater than or equal to 0")
+        return 1
+    unstable = args.runs > 1 and energy_cv_pct > stability_threshold
 
     payload = {
         "script": result.script,
@@ -82,6 +109,7 @@ def handle(args: argparse.Namespace) -> int:
             "estimated_energy_wh_mean": summary.estimated_energy_wh_mean,
             "estimated_energy_wh_median": summary.estimated_energy_wh_median,
             "estimated_energy_wh_stddev": summary.estimated_energy_wh_stddev,
+            "estimated_energy_wh_cv_pct": energy_cv_pct,
             "sustainability_score_mean": summary.sustainability_score_mean,
             "sustainability_score_min": summary.sustainability_score_min,
             "sustainability_score_max": summary.sustainability_score_max,
@@ -107,6 +135,8 @@ def handle(args: argparse.Namespace) -> int:
 
     if args.json:
         print(json.dumps(payload, indent=2))
+        if args.fail_on_unstable and unstable:
+            return 3
         return 0
 
     print("EcoCode profile report")
@@ -119,6 +149,12 @@ def handle(args: argparse.Namespace) -> int:
         print(f"Runs:                 {args.runs}")
         print(f"Energy median (Wh):   {summary.estimated_energy_wh_median}")
         print(f"Energy stddev (Wh):   {summary.estimated_energy_wh_stddev}")
+        print(f"Energy CV (%):        {energy_cv_pct}")
+        print(f"Stability limit (%):  {stability_threshold}")
+        if unstable:
+            print("Stability:            UNSTABLE")
+            if args.fail_on_unstable:
+                return 3
     if saved_path is not None:
         print(f"Audit run saved:      {saved_path}")
     return 0

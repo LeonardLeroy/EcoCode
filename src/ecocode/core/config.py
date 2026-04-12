@@ -14,6 +14,9 @@ class ProjectConfig:
     history_dir: str = ".ecocode/history"
     baseline_energy_threshold_pct: float = 5.0
     profile_repo_max_files: int = 50
+    calibration_cpu_wh_per_cpu_second: float = 0.07
+    calibration_memory_wh_per_mb: float = 0.003
+    stability_max_energy_cv_pct: float = 35.0
 
 
 def _find_config_file(start_dir: Path) -> Path | None:
@@ -36,6 +39,8 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
     history = raw.get("history", {})
     baseline = raw.get("baseline", {})
     profile_repo = raw.get("profile_repo", {})
+    calibration = raw.get("calibration", {})
+    stability = raw.get("stability", {})
 
     return ProjectConfig(
         project_root=config_file.parent,
@@ -46,4 +51,13 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
             baseline.get("energy_threshold_pct", 5.0)
         ),
         profile_repo_max_files=int(profile_repo.get("max_files", 50)),
+        calibration_cpu_wh_per_cpu_second=float(
+            calibration.get("cpu_wh_per_cpu_second", 0.07)
+        ),
+        calibration_memory_wh_per_mb=float(
+            calibration.get("memory_wh_per_mb", 0.003)
+        ),
+        stability_max_energy_cv_pct=float(
+            stability.get("max_energy_cv_pct", 35.0)
+        ),
     )

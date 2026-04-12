@@ -41,21 +41,38 @@ class ProfileStatistics:
     sustainability_score_max: int
 
 
-def _estimate_energy_wh(cpu_seconds: float, memory_mb: float) -> float:
-    return round(cpu_seconds * 0.07 + memory_mb * 0.003, 4)
+def _estimate_energy_wh(
+    cpu_seconds: float,
+    memory_mb: float,
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> float:
+    return round(
+        cpu_seconds * cpu_energy_factor + memory_mb * memory_energy_factor,
+        4,
+    )
 
 
 def _compute_sustainability_score(cpu_seconds: float, memory_mb: float) -> int:
     return max(0, 100 - int(cpu_seconds * 2.2 + memory_mb * 0.08))
 
 
-def _profile_placeholder(script_path: Path) -> ProfileResult:
+def _profile_placeholder(
+    script_path: Path,
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> ProfileResult:
     digest = hashlib.sha256(script_path.as_posix().encode("utf-8")).hexdigest()
     base = int(digest[:8], 16)
 
     cpu_seconds = round(0.5 + (base % 900) / 100.0, 2)
     memory_mb = round(20 + (base % 2000) / 10.0, 2)
-    estimated_energy_wh = _estimate_energy_wh(cpu_seconds, memory_mb)
+    estimated_energy_wh = _estimate_energy_wh(
+        cpu_seconds,
+        memory_mb,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
     score = _compute_sustainability_score(cpu_seconds, memory_mb)
 
     return ProfileResult(
@@ -79,7 +96,11 @@ def _build_runtime_command(script_path: Path) -> list[str]:
     )
 
 
-def _profile_runtime(script_path: Path) -> ProfileResult:
+def _profile_runtime(
+    script_path: Path,
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> ProfileResult:
     system = platform.system().lower()
     if system not in {"linux", "darwin"}:
         raise RuntimeError("Runtime collector currently supports Unix-like systems")
@@ -87,12 +108,27 @@ def _profile_runtime(script_path: Path) -> ProfileResult:
     command = _build_runtime_command(script_path)
 
     if system == "linux":
-        return _profile_runtime_linux_process_group(script_path, command)
+        return _profile_runtime_linux_process_group(
+            script_path,
+            command,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
 
-    return _profile_runtime_children_usage(script_path, command)
+    return _profile_runtime_children_usage(
+        script_path,
+        command,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
 
 
-def _profile_runtime_children_usage(script_path: Path, command: list[str]) -> ProfileResult:
+def _profile_runtime_children_usage(
+    script_path: Path,
+    command: list[str],
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> ProfileResult:
     """Fallback runtime collector based on RUSAGE_CHILDREN aggregates."""
 
     usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
@@ -123,7 +159,12 @@ def _profile_runtime_children_usage(script_path: Path, command: list[str]) -> Pr
     if cpu_seconds == 0.0:
         cpu_seconds = round(max(0.0001, ended - started), 4)
 
-    estimated_energy_wh = _estimate_energy_wh(cpu_seconds, memory_mb)
+    estimated_energy_wh = _estimate_energy_wh(
+        cpu_seconds,
+        memory_mb,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
     score = _compute_sustainability_score(cpu_seconds, memory_mb)
 
     return ProfileResult(
@@ -184,6 +225,8 @@ def _read_process_group_totals(process_group_id: int) -> tuple[int, int]:
 def _profile_runtime_linux_process_group(
     script_path: Path,
     command: list[str],
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
 ) -> ProfileResult:
     """Linux runtime collector with process-group sampling (includes subprocess tree)."""
     try:
@@ -231,7 +274,12 @@ def _profile_runtime_linux_process_group(
 
     memory_mb = round((peak_rss_pages * page_size) / (1024 * 1024), 6)
 
-    estimated_energy_wh = _estimate_energy_wh(cpu_seconds, memory_mb)
+    estimated_energy_wh = _estimate_energy_wh(
+        cpu_seconds,
+        memory_mb,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
     score = _compute_sustainability_score(cpu_seconds, memory_mb)
 
     return ProfileResult(
@@ -246,16 +294,26 @@ def _profile_runtime_linux_process_group(
 def profile_script(
     script_path: Path,
     collector: CollectorType = "placeholder",
+    cpu_energy_factor: float = 0.07,
+    memory_energy_factor: float = 0.003,
 ) -> ProfileResult:
     """Profile a script using either placeholder or runtime collection."""
     if not script_path.exists() or not script_path.is_file():
         raise FileNotFoundError(f"Script not found: {script_path}")
 
     if collector == "placeholder":
-        return _profile_placeholder(script_path)
+        return _profile_placeholder(
+            script_path,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
 
     if collector == "runtime":
-        return _profile_runtime(script_path)
+        return _profile_runtime(
+            script_path,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
 
     raise ValueError(f"Unsupported collector: {collector}")
 
@@ -264,11 +322,21 @@ def profile_script_repeated(
     script_path: Path,
     collector: CollectorType = "placeholder",
     runs: int = 1,
+    cpu_energy_factor: float = 0.07,
+    memory_energy_factor: float = 0.003,
 ) -> list[ProfileResult]:
     if runs <= 0:
         raise ValueError("runs must be greater than 0")
 
-    return [profile_script(script_path, collector=collector) for _ in range(runs)]
+    return [
+        profile_script(
+            script_path,
+            collector=collector,
+            cpu_energy_factor=cpu_energy_factor,
+            memory_energy_factor=memory_energy_factor,
+        )
+        for _ in range(runs)
+    ]
 
 
 def summarize_profile_runs(results: list[ProfileResult]) -> ProfileStatistics:

@@ -54,6 +54,17 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Repeat repository profiling multiple times and summarize totals",
     )
     parser.add_argument(
+        "--max-energy-cv-pct",
+        type=float,
+        default=None,
+        help="Maximum allowed coefficient of variation (%%) for total energy over runs",
+    )
+    parser.add_argument(
+        "--fail-on-unstable",
+        action="store_true",
+        help="Return non-zero if run variability exceeds stability threshold",
+    )
+    parser.add_argument(
         "--sarif-output",
         default=None,
         help="Write SARIF report to the given file path",
@@ -95,6 +106,8 @@ def handle(args: argparse.Namespace) -> int:
                 extensions=extensions,
                 max_files=max_files,
                 collector=args.collector,
+                cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
+                memory_energy_factor=config.calibration_memory_wh_per_mb,
             )
             for _ in range(args.runs)
         ]
@@ -105,14 +118,26 @@ def handle(args: argparse.Namespace) -> int:
     result = run_results[-1]
 
     total_energy_values = [item.total_energy_wh for item in run_results]
+    total_energy_cv_pct = 0.0
+    energy_mean = mean(total_energy_values)
+    energy_stddev = pstdev(total_energy_values) if len(total_energy_values) > 1 else 0.0
+    if energy_mean > 0:
+        total_energy_cv_pct = round((energy_stddev / energy_mean) * 100.0, 6)
+
+    stability_threshold = args.max_energy_cv_pct
+    if stability_threshold is None:
+        stability_threshold = config.stability_max_energy_cv_pct
+    if stability_threshold < 0:
+        print("--max-energy-cv-pct must be greater than or equal to 0")
+        return 1
+    unstable = args.runs > 1 and total_energy_cv_pct > stability_threshold
+
     summary = {
         "runs": args.runs,
-        "total_energy_wh_mean": round(mean(total_energy_values), 6),
+        "total_energy_wh_mean": round(energy_mean, 6),
         "total_energy_wh_median": round(median(total_energy_values), 6),
-        "total_energy_wh_stddev": round(
-            pstdev(total_energy_values) if len(total_energy_values) > 1 else 0.0,
-            6,
-        ),
+        "total_energy_wh_stddev": round(energy_stddev, 6),
+        "total_energy_wh_cv_pct": total_energy_cv_pct,
     }
 
     payload = {
@@ -125,6 +150,10 @@ def handle(args: argparse.Namespace) -> int:
         "total_energy_wh": result.total_energy_wh,
         "average_sustainability_score": result.average_sustainability_score,
         "summary": summary,
+        "stability": {
+            "max_energy_cv_pct": stability_threshold,
+            "unstable": unstable,
+        },
         "extensions": sorted(extensions),
         "files": [
             {
@@ -156,6 +185,8 @@ def handle(args: argparse.Namespace) -> int:
 
     if args.json:
         print(json.dumps(payload, indent=2))
+        if args.fail_on_unstable and unstable:
+            return 3
         return 0
 
     print("EcoCode repository profile")
@@ -169,6 +200,12 @@ def handle(args: argparse.Namespace) -> int:
         print(f"Runs:                     {args.runs}")
         print(f"Energy median (Wh):       {summary['total_energy_wh_median']}")
         print(f"Energy stddev (Wh):       {summary['total_energy_wh_stddev']}")
+        print(f"Energy CV (%):            {summary['total_energy_wh_cv_pct']}")
+        print(f"Stability limit (%):      {stability_threshold}")
+        if unstable:
+            print("Stability:                UNSTABLE")
+            if args.fail_on_unstable:
+                return 3
     if sarif_written_path is not None:
         print(f"SARIF written:            {sarif_written_path}")
 
