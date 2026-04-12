@@ -5,7 +5,12 @@ import json
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
-from ecocode.core.optimizer import generate_optimization_patch, suggest_optimizations
+from ecocode.core.local_llm import fetch_local_llm_suggestions
+from ecocode.core.optimizer import (
+    generate_optimization_patch,
+    merge_optimization_suggestions,
+    suggest_optimizations,
+)
 from ecocode.core.profiler import (
     DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
     profile_script_repeated,
@@ -129,15 +134,34 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
 
 def handle_suggest(args: argparse.Namespace) -> int:
     script_path = Path(args.script).resolve()
+    config = load_project_config(Path.cwd())
 
     try:
         suggestions = suggest_optimizations(
             script_path=script_path,
             max_suggestions=args.max_suggestions,
         )
+
+        if config.optimize_llm_enabled:
+            llm_suggestions = fetch_local_llm_suggestions(
+                script_path=script_path,
+                provider=config.optimize_llm_provider,
+                model=config.optimize_llm_model,
+                max_suggestions=min(args.max_suggestions, config.optimize_llm_max_suggestions),
+                timeout_seconds=config.optimize_llm_timeout_seconds,
+            )
+            suggestions = merge_optimization_suggestions(
+                primary=suggestions,
+                secondary=llm_suggestions,
+                max_suggestions=args.max_suggestions,
+            )
     except (FileNotFoundError, ValueError, UnicodeError) as exc:
         print(str(exc))
         return 1
+    except (RuntimeError, OSError, json.JSONDecodeError) as exc:
+        # Keep deterministic fallback when local provider is unavailable.
+        if not args.json:
+            print(f"Local LLM unavailable, using deterministic suggestions only: {exc}")
 
     payload = {
         "schemaVersion": CURRENT_SCHEMA_VERSION,

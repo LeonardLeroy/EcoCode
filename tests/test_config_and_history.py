@@ -46,6 +46,13 @@ enabled = true
 allowed_patch_rule_ids = ["PY001", "PY002"]
 default_patch_rule_id = "PY002"
 max_patch_changes = 4
+
+[optimize.llm]
+enabled = true
+provider = "none"
+model = ""
+max_suggestions = 2
+timeout_seconds = 9.5
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -68,6 +75,11 @@ max_patch_changes = 4
     assert config.optimize_allowed_patch_rule_ids == ("PY001", "PY002")
     assert config.optimize_default_patch_rule_id == "PY002"
     assert config.optimize_max_patch_changes == 4
+    assert config.optimize_llm_enabled is True
+    assert config.optimize_llm_provider == "none"
+    assert config.optimize_llm_model == ""
+    assert config.optimize_llm_max_suggestions == 2
+    assert config.optimize_llm_timeout_seconds == 9.5
 
 
 def test_profile_save_run_creates_history_file(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -209,3 +221,31 @@ default_patch_rule_id = "PY002"
 
     assert exit_code == 1
     assert "not enabled by the current optimize policy" in output.out
+
+
+def test_optimize_suggest_with_llm_none_provider_keeps_deterministic_results(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    (tmp_path / "ecocode.toml").write_text(
+        """
+[optimize.llm]
+enabled = true
+provider = "none"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    script = tmp_path / "demo.py"
+    script.write_text("for i in range(len([1,2,3])):\n    pass\n", encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    exit_code = main(["optimize", "suggest", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["command"] == "optimize suggest"
+    assert payload["suggestion_count"] >= 1

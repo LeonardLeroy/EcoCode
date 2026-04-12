@@ -66,6 +66,27 @@ def suggest_optimizations(script_path: Path, max_suggestions: int = 10) -> list[
     return deduped
 
 
+def merge_optimization_suggestions(
+    primary: list[OptimizationSuggestion],
+    secondary: list[OptimizationSuggestion],
+    max_suggestions: int,
+) -> list[OptimizationSuggestion]:
+    if max_suggestions <= 0:
+        raise ValueError("max_suggestions must be greater than 0")
+
+    merged: list[OptimizationSuggestion] = []
+    seen: set[str] = set()
+    for item in [*primary, *secondary]:
+        key = f"{item.rule_id}:{item.title}"
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+        if len(merged) >= max_suggestions:
+            break
+    return merged
+
+
 def generate_optimization_patch(
     script_path: Path,
     output_path: Path,

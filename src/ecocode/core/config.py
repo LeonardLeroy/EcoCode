@@ -21,6 +21,11 @@ class ProjectConfig:
     optimize_allowed_patch_rule_ids: tuple[str, ...] = ()
     optimize_default_patch_rule_id: str | None = None
     optimize_max_patch_changes: int = 10
+    optimize_llm_enabled: bool = False
+    optimize_llm_provider: str = "none"
+    optimize_llm_model: str = ""
+    optimize_llm_max_suggestions: int = 3
+    optimize_llm_timeout_seconds: float = 20.0
 
 
 def _find_config_file(start_dir: Path) -> Path | None:
@@ -46,6 +51,7 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
     calibration = raw.get("calibration", {})
     stability = raw.get("stability", {})
     optimize = raw.get("optimize", {})
+    optimize_llm = optimize.get("llm", {})
 
     allowed_patch_rule_ids = optimize.get("allowed_patch_rule_ids", ())
     if not isinstance(allowed_patch_rule_ids, list):
@@ -59,6 +65,9 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
     default_patch_rule_id = optimize.get("default_patch_rule_id")
     if default_patch_rule_id is not None:
         default_patch_rule_id = str(default_patch_rule_id).strip() or None
+
+    llm_provider = str(optimize_llm.get("provider", "none")).strip().lower()
+    llm_model = str(optimize_llm.get("model", "")).strip()
 
     return ProjectConfig(
         project_root=config_file.parent,
@@ -82,4 +91,9 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
         optimize_allowed_patch_rule_ids=normalized_allowed_patch_rule_ids,
         optimize_default_patch_rule_id=default_patch_rule_id,
         optimize_max_patch_changes=int(optimize.get("max_patch_changes", 10)),
+        optimize_llm_enabled=bool(optimize_llm.get("enabled", False)),
+        optimize_llm_provider=llm_provider,
+        optimize_llm_model=llm_model,
+        optimize_llm_max_suggestions=int(optimize_llm.get("max_suggestions", 3)),
+        optimize_llm_timeout_seconds=float(optimize_llm.get("timeout_seconds", 20.0)),
     )
