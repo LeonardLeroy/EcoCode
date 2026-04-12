@@ -19,6 +19,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 	- `ecocode baseline create <script> -o <file>`
 	- `ecocode baseline compare <script> --baseline <file>`
 	- `ecocode profile-repo --root <path>`
+	- `ecocode trend`
 - Output modes: human-readable and JSON (`--json`)
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
@@ -51,11 +52,23 @@ Examples:
 
 - Scan and profile supported source files in a repository.
 - Supports extension filters and max files limits.
+- Supports SARIF export for CI and code-scanning integrations.
 
 Examples:
 - `ecocode profile-repo --root .`
 - `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
 - `ecocode profile-repo --root . --json --save-run`
+- `ecocode profile-repo --root . --sarif-output .ecocode/reports/ecocode.sarif`
+
+### Trend analysis
+
+- Read saved audit history and summarize progression over time.
+- Supports command filter, limit, and JSON output.
+
+Examples:
+- `ecocode trend`
+- `ecocode trend --json`
+- `ecocode trend --command profile-repo --limit 20 --json`
 
 ### Audit history tracking
 
