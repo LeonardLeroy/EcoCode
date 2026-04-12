@@ -40,6 +40,12 @@ memory_wh_per_mb = 0.004
 
 [stability]
 max_energy_cv_pct = 20.0
+
+[optimize]
+enabled = true
+allowed_patch_rule_ids = ["PY001", "PY002"]
+default_patch_rule_id = "PY002"
+max_patch_changes = 4
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -58,6 +64,10 @@ max_energy_cv_pct = 20.0
     assert config.calibration_cpu_wh_per_cpu_second == 0.09
     assert config.calibration_memory_wh_per_mb == 0.004
     assert config.stability_max_energy_cv_pct == 20.0
+    assert config.optimize_enabled is True
+    assert config.optimize_allowed_patch_rule_ids == ("PY001", "PY002")
+    assert config.optimize_default_patch_rule_id == "PY002"
+    assert config.optimize_max_patch_changes == 4
 
 
 def test_profile_save_run_creates_history_file(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -147,3 +157,55 @@ def test_profile_rejects_negative_stability_threshold(tmp_path: Path, capsys) ->
 
     assert exit_code == 1
     assert "--max-energy-cv-pct must be greater than or equal to 0" in output.out
+
+
+def test_optimize_patch_uses_config_default_and_limits(tmp_path: Path, monkeypatch, capsys) -> None:
+    (tmp_path / "ecocode.toml").write_text(
+        """
+[optimize]
+allowed_patch_rule_ids = ["PY002"]
+default_patch_rule_id = "PY002"
+max_patch_changes = 4
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    script = tmp_path / "demo.py"
+    script.write_text(
+        "result = ''\nfor item in [1, 2, 3]:\n    result += 'x'\nprint(result)\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    exit_code = main(["optimize", "patch", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["rule_id"] == "PY002"
+
+
+def test_optimize_patch_rejects_disallowed_rule(tmp_path: Path, monkeypatch, capsys) -> None:
+    (tmp_path / "ecocode.toml").write_text(
+        """
+[optimize]
+allowed_patch_rule_ids = ["PY001"]
+default_patch_rule_id = "PY002"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    script = tmp_path / "demo.py"
+    script.write_text(
+        "result = ''\nfor item in [1, 2, 3]:\n    result += 'x'\nprint(result)\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    exit_code = main(["optimize", "patch", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "not enabled by the current optimize policy" in output.out

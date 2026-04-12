@@ -71,6 +71,9 @@ def generate_optimization_patch(
     output_path: Path,
     rule_id: str | None = None,
     overwrite: bool = False,
+    allowed_patch_rule_ids: tuple[str, ...] = (),
+    default_patch_rule_id: str | None = None,
+    max_patch_changes: int | None = None,
 ) -> OptimizationPatchResult:
     if not script_path.exists() or not script_path.is_file():
         raise FileNotFoundError(f"Script not found: {script_path}")
@@ -83,15 +86,25 @@ def generate_optimization_patch(
     if language != "python":
         raise ValueError("optimize patch MVP currently supports only Python files")
 
+    selected_rule_id = rule_id if rule_id is not None else default_patch_rule_id
     suggestions = suggest_optimizations(script_path=script_path, max_suggestions=50)
-    selected = _select_patch_suggestion(suggestions, rule_id=rule_id)
+    selected = _select_patch_suggestion(suggestions, rule_id=selected_rule_id)
     if selected is None:
-        requested = rule_id or "(auto)"
+        requested = selected_rule_id or "(auto)"
         raise ValueError(f"No patchable optimization suggestion found for rule: {requested}")
+
+    if allowed_patch_rule_ids and selected.rule_id not in allowed_patch_rule_ids:
+        raise ValueError(
+            f"Patch rule {selected.rule_id} is not enabled by the current optimize policy"
+        )
 
     candidate_source, changes_count = _apply_python_patch_strategy(source, selected.rule_id)
     if changes_count == 0:
         raise ValueError(f"Rule {selected.rule_id} was detected but no safe patch could be applied")
+    if max_patch_changes is not None and changes_count > max_patch_changes:
+        raise ValueError(
+            f"Patch for rule {selected.rule_id} exceeds max_patch_changes={max_patch_changes}"
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(candidate_source, encoding="utf-8")

@@ -17,6 +17,10 @@ class ProjectConfig:
     calibration_cpu_wh_per_cpu_second: float = 0.07
     calibration_memory_wh_per_mb: float = 0.003
     stability_max_energy_cv_pct: float = 35.0
+    optimize_enabled: bool = True
+    optimize_allowed_patch_rule_ids: tuple[str, ...] = ()
+    optimize_default_patch_rule_id: str | None = None
+    optimize_max_patch_changes: int = 10
 
 
 def _find_config_file(start_dir: Path) -> Path | None:
@@ -41,6 +45,20 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
     profile_repo = raw.get("profile_repo", {})
     calibration = raw.get("calibration", {})
     stability = raw.get("stability", {})
+    optimize = raw.get("optimize", {})
+
+    allowed_patch_rule_ids = optimize.get("allowed_patch_rule_ids", ())
+    if not isinstance(allowed_patch_rule_ids, list):
+        allowed_patch_rule_ids = []
+    normalized_allowed_patch_rule_ids = tuple(
+        str(item).strip()
+        for item in allowed_patch_rule_ids
+        if str(item).strip()
+    )
+
+    default_patch_rule_id = optimize.get("default_patch_rule_id")
+    if default_patch_rule_id is not None:
+        default_patch_rule_id = str(default_patch_rule_id).strip() or None
 
     return ProjectConfig(
         project_root=config_file.parent,
@@ -60,4 +78,8 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
         stability_max_energy_cv_pct=float(
             stability.get("max_energy_cv_pct", 35.0)
         ),
+        optimize_enabled=bool(optimize.get("enabled", True)),
+        optimize_allowed_patch_rule_ids=normalized_allowed_patch_rule_ids,
+        optimize_default_patch_rule_id=default_patch_rule_id,
+        optimize_max_patch_changes=int(optimize.get("max_patch_changes", 10)),
     )

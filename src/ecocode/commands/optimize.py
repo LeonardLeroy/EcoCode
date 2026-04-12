@@ -188,6 +188,11 @@ def _default_candidate_output_path(script_path: Path) -> Path:
 
 
 def handle_patch(args: argparse.Namespace) -> int:
+    config = load_project_config(Path.cwd())
+    if not config.optimize_enabled:
+        print("optimize patch is disabled by the current optimize policy")
+        return 1
+
     script_path = Path(args.script).resolve()
     output_path = (
         Path(args.output).resolve()
@@ -201,6 +206,9 @@ def handle_patch(args: argparse.Namespace) -> int:
             output_path=output_path,
             rule_id=args.rule_id,
             overwrite=args.overwrite,
+            allowed_patch_rule_ids=config.optimize_allowed_patch_rule_ids,
+            default_patch_rule_id=config.optimize_default_patch_rule_id,
+            max_patch_changes=config.optimize_max_patch_changes,
         )
     except (FileNotFoundError, ValueError, UnicodeError) as exc:
         print(str(exc))
