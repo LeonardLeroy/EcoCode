@@ -6,6 +6,9 @@ from pathlib import Path
 import tomllib
 
 
+DEFAULT_LOCAL_LLM_MODEL = "qwen2.5-coder:7b"
+
+
 @dataclass(slots=True)
 class ProjectConfig:
     project_root: Path
@@ -23,7 +26,7 @@ class ProjectConfig:
     optimize_max_patch_changes: int = 10
     optimize_llm_enabled: bool = False
     optimize_llm_provider: str = "none"
-    optimize_llm_model: str = ""
+    optimize_llm_model: str = DEFAULT_LOCAL_LLM_MODEL
     optimize_llm_max_suggestions: int = 3
     optimize_llm_timeout_seconds: float = 20.0
 
@@ -67,7 +70,9 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
         default_patch_rule_id = str(default_patch_rule_id).strip() or None
 
     llm_provider = str(optimize_llm.get("provider", "none")).strip().lower()
-    llm_model = str(optimize_llm.get("model", "")).strip()
+    llm_model = str(optimize_llm.get("model", DEFAULT_LOCAL_LLM_MODEL)).strip()
+    if not llm_model:
+        llm_model = DEFAULT_LOCAL_LLM_MODEL
 
     return ProjectConfig(
         project_root=config_file.parent,

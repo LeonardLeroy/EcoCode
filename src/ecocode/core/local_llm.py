@@ -8,6 +8,19 @@ from urllib.request import Request, urlopen
 from ecocode.core.optimizer import OptimizationSuggestion
 
 
+DEFAULT_OLLAMA_CODING_MODEL = "qwen2.5-coder:7b"
+DISCOURAGED_OLLAMA_MODELS = {"granite3.1-moe", "granite3.1-moe:latest"}
+PREFERRED_OLLAMA_MODELS = (
+    "qwen2.5-coder:32b",
+    "qwen2.5-coder:14b",
+    "qwen2.5-coder:7b",
+    "deepseek-coder-v2:16b",
+    "deepseek-coder:6.7b",
+    "codellama:13b",
+    "codellama:7b",
+)
+
+
 def fetch_local_llm_suggestions(
     script_path: Path,
     provider: str,
@@ -24,12 +37,11 @@ def fetch_local_llm_suggestions(
 
     if normalized_provider != "ollama":
         raise ValueError(f"Unsupported local LLM provider: {provider}")
-    if not model.strip():
-        raise ValueError("optimize.llm.model must be set when optimize.llm.enabled is true")
+    resolved_model = resolve_ollama_model(model, timeout_seconds=timeout_seconds)
 
     source = script_path.read_text(encoding="utf-8", errors="replace")
     payload = {
-        "model": model,
+        "model": resolved_model,
         "stream": False,
         "format": "json",
         "prompt": (
@@ -97,3 +109,52 @@ def fetch_local_llm_suggestions(
             break
 
     return suggestions
+
+
+def resolve_ollama_model(requested_model: str, timeout_seconds: float) -> str:
+    normalized_requested = requested_model.strip().lower()
+
+    if normalized_requested and normalized_requested not in DISCOURAGED_OLLAMA_MODELS:
+        return requested_model.strip()
+
+    available = list_ollama_models(timeout_seconds=timeout_seconds)
+    available_map = {name.lower(): name for name in available}
+
+    for preferred in PREFERRED_OLLAMA_MODELS:
+        matched = available_map.get(preferred.lower())
+        if matched is not None:
+            return matched
+
+    for name in available:
+        if name.lower() not in DISCOURAGED_OLLAMA_MODELS:
+            return name
+
+    return DEFAULT_OLLAMA_CODING_MODEL
+
+
+def list_ollama_models(timeout_seconds: float) -> list[str]:
+    request = Request(
+        "http://127.0.0.1:11434/api/tags",
+        headers={"Content-Type": "application/json"},
+        method="GET",
+    )
+
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except URLError:
+        return []
+
+    raw_models = payload.get("models", []) if isinstance(payload, dict) else []
+    if not isinstance(raw_models, list):
+        return []
+
+    names: list[str] = []
+    for item in raw_models:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        names.append(name)
+    return names

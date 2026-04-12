@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from ecocode.cli import main
-from ecocode.core.config import load_project_config
+from ecocode.core.config import DEFAULT_LOCAL_LLM_MODEL, load_project_config
 
 
 def test_load_project_config_defaults(tmp_path: Path) -> None:
@@ -77,7 +77,7 @@ timeout_seconds = 9.5
     assert config.optimize_max_patch_changes == 4
     assert config.optimize_llm_enabled is True
     assert config.optimize_llm_provider == "none"
-    assert config.optimize_llm_model == ""
+    assert config.optimize_llm_model == DEFAULT_LOCAL_LLM_MODEL
     assert config.optimize_llm_max_suggestions == 2
     assert config.optimize_llm_timeout_seconds == 9.5
 
