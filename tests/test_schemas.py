@@ -128,3 +128,24 @@ def test_benchmark_schema_accepts_valid_payload() -> None:
     }
 
     validate_named_schema("benchmark_report", payload)
+
+
+def test_optimize_suggest_schema_accepts_valid_payload() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "command": "optimize suggest",
+        "script": "/tmp/demo.py",
+        "suggestion_count": 1,
+        "suggestions": [
+            {
+                "rule_id": "PY001",
+                "title": "Prefer direct iteration",
+                "rationale": "Index loop can be replaced by direct iteration",
+                "impact": "medium",
+                "confidence": 0.8,
+                "language": "python",
+            }
+        ],
+    }
+
+    validate_named_schema("optimize_suggest_report", payload)

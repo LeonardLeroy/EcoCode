@@ -222,3 +222,27 @@ def test_benchmark_command_fail_on_acceptance(tmp_path: Path, capsys) -> None:
     payload = json.loads(output.out)
     assert payload["status"] == "failed"
     assert exit_code == 4
+
+
+def test_optimize_suggest_json_success(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text(
+        "for i in range(len([1,2,3])):\n    pass\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["optimize", "suggest", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["command"] == "optimize suggest"
+    assert payload["suggestion_count"] >= 1
+
+
+def test_optimize_suggest_missing_file(capsys) -> None:
+    exit_code = main(["optimize", "suggest", "missing.py", "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "script not found" in output.out.lower()

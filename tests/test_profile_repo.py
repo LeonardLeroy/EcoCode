@@ -124,3 +124,16 @@ def test_profile_repo_include_and_exclude_globs(tmp_path: Path, capsys) -> None:
     assert payload["files"][0]["script"].endswith("keep.py")
     assert payload["include_globs"] == ["*.py"]
     assert payload["exclude_globs"] == ["skip.py"]
+
+
+def test_profile_repo_default_extensions_include_web_and_asm(tmp_path: Path, capsys) -> None:
+    (tmp_path / "index.html").write_text("<html><body>Hello</body></html>\n", encoding="utf-8")
+    (tmp_path / "styles.css").write_text("body { color: #333; }\n", encoding="utf-8")
+    (tmp_path / "boot.asm").write_text("mov ax, bx\nmov bx, cx\n", encoding="utf-8")
+
+    exit_code = main(["profile-repo", "--root", str(tmp_path), "--json", "--max-files", "10"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["total_files"] == 3

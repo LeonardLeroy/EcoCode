@@ -93,6 +93,25 @@ BENCHMARK_FIXTURE_KEYS = {
 }
 
 
+OPTIMIZE_SUGGEST_KEYS = {
+    "schemaVersion",
+    "command",
+    "script",
+    "suggestion_count",
+    "suggestions",
+}
+
+
+OPTIMIZE_SUGGEST_ITEM_KEYS = {
+    "rule_id",
+    "title",
+    "rationale",
+    "impact",
+    "confidence",
+    "language",
+}
+
+
 def test_profile_json_contract(tmp_path: Path, capsys) -> None:
     script = tmp_path / "demo.py"
     script.write_text("print('hello')\n", encoding="utf-8")
@@ -218,3 +237,17 @@ def test_benchmark_json_contract(tmp_path: Path, capsys) -> None:
     assert set(payload["summary"].keys()) == BENCHMARK_SUMMARY_KEYS
     if payload["fixtures"]:
         assert set(payload["fixtures"][0].keys()) == BENCHMARK_FIXTURE_KEYS
+
+
+def test_optimize_suggest_json_contract(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "script.py"
+    script.write_text("for i in range(len([1,2,3])):\n    pass\n", encoding="utf-8")
+
+    exit_code = main(["optimize", "suggest", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert set(payload.keys()) == OPTIMIZE_SUGGEST_KEYS
+    if payload["suggestions"]:
+        assert set(payload["suggestions"][0].keys()) == OPTIMIZE_SUGGEST_ITEM_KEYS
