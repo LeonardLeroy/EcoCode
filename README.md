@@ -89,6 +89,9 @@ Examples:
 ```text
 .
 ├── .github/ISSUE_TEMPLATE/
+│   ├── bug_report.md
+│   ├── config.yml
+│   └── feature_request.md
 ├── docs/
 │   └── ROADMAP.md
 ├── implementations/
@@ -96,10 +99,25 @@ Examples:
 │   ├── csharp/
 │   └── rust/
 ├── src/ecocode/
+│   ├── __init__.py
 │   ├── cli.py
 │   ├── commands/
+│   │   ├── baseline.py
+│   │   ├── profile.py
+│   │   ├── profile_repo.py
+│   │   └── trend.py
 │   └── core/
+│       ├── config.py
+│       ├── history.py
+│       ├── profiler.py
+│       ├── repository_profiler.py
+│       ├── sarif.py
+│       └── trend.py
 ├── tests/
+│   ├── test_cli.py
+│   ├── test_config_and_history.py
+│   ├── test_profile_repo.py
+│   └── test_trend.py
 ├── CONTRIBUTING.md
 ├── pyproject.toml
 └── README.md

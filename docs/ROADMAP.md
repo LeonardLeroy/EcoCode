@@ -5,6 +5,9 @@
 - Done: `ecocode profile <script>` with text and JSON output.
 - Done: `ecocode baseline create` and `ecocode baseline compare`.
 - Done: `ecocode profile-repo --root <path>` for repository-wide aggregation.
+- Done: `ecocode trend` to summarize audit progression history.
+- Done: SARIF export support via `profile-repo --sarif-output`.
+- Done: project configuration support through `ecocode.toml`.
 - Next: replace placeholder metrics with real runtime collectors.
 
 ## Phase 1 - The Core
@@ -55,13 +58,13 @@
 5. Implement repeated-run median profile mode.
 6. Add process tree profiling for subprocess-heavy scripts.
 7. Add configurable sampling interval.
-8. Add project-level config file (`ecocode.toml`).
+8. Done: Add project-level config file (`ecocode.toml`).
 9. Add include/exclude path filters.
 10. Add Windows-specific process collector.
 11. Add Linux cgroup-aware measurements.
 12. Add macOS collector.
 13. Add deterministic benchmark fixture pack.
-14. Add SARIF output for CI tooling.
+14. Done: Add SARIF output for CI tooling.
 15. Add GitHub Action prototype.
 16. Add static rules engine skeleton.
 17. Add VS Code extension MVP (display profile report).
