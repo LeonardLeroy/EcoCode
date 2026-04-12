@@ -11,6 +11,8 @@ DEFAULT_SCRIPT_EXTENSIONS = {
     ".sh",
     ".js",
     ".ts",
+    ".jsx",
+    ".tsx",
     ".rb",
     ".go",
     ".rs",
@@ -18,6 +20,15 @@ DEFAULT_SCRIPT_EXTENSIONS = {
     ".cs",
     ".c",
     ".cpp",
+    ".cc",
+    ".cxx",
+    ".h",
+    ".hpp",
+    ".html",
+    ".htm",
+    ".css",
+    ".asm",
+    ".s",
 }
 
 SKIP_DIR_NAMES = {
