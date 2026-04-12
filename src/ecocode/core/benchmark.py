@@ -3,9 +3,43 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean, median, pstdev
+from typing import Literal
 
 from ecocode.core.profiler import CollectorType, profile_script_repeated, summarize_profile_runs
 from ecocode.core.repository_profiler import discover_profile_targets
+
+
+NoiseProfile = Literal["idle", "warm", "cpu-bound"]
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkNoiseDefaults:
+    runs: int
+    max_energy_cv_pct: float
+    max_suite_cv_pct: float
+    max_unstable_fixtures: int
+
+
+NOISE_PROFILE_DEFAULTS: dict[NoiseProfile, BenchmarkNoiseDefaults] = {
+    "idle": BenchmarkNoiseDefaults(
+        runs=5,
+        max_energy_cv_pct=20.0,
+        max_suite_cv_pct=12.0,
+        max_unstable_fixtures=0,
+    ),
+    "warm": BenchmarkNoiseDefaults(
+        runs=7,
+        max_energy_cv_pct=15.0,
+        max_suite_cv_pct=10.0,
+        max_unstable_fixtures=0,
+    ),
+    "cpu-bound": BenchmarkNoiseDefaults(
+        runs=9,
+        max_energy_cv_pct=10.0,
+        max_suite_cv_pct=7.0,
+        max_unstable_fixtures=0,
+    ),
+}
 
 
 @dataclass(slots=True)
@@ -23,10 +57,14 @@ class BenchmarkFixtureResult:
 class BenchmarkSuiteResult:
     fixtures_dir: str
     collector: CollectorType
+    noise_profile: NoiseProfile
     runs: int
     max_energy_cv_pct: float
+    max_suite_cv_pct: float
+    max_unstable_fixtures: int
     total_fixtures: int
     unstable_fixtures: int
+    acceptance_passed: bool
     summary_energy_wh_mean: float
     summary_energy_wh_median: float
     summary_energy_wh_stddev: float
@@ -49,18 +87,43 @@ def discover_benchmark_fixtures(fixtures_dir: Path, max_files: int = 50) -> list
 def run_benchmark_suite(
     fixtures_dir: Path,
     collector: CollectorType = "placeholder",
-    runs: int = 5,
-    max_energy_cv_pct: float = 35.0,
+    noise_profile: NoiseProfile = "warm",
+    runs: int | None = None,
+    max_energy_cv_pct: float | None = None,
+    max_suite_cv_pct: float | None = None,
+    max_unstable_fixtures: int | None = None,
     max_files: int = 50,
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
 ) -> BenchmarkSuiteResult:
-    if runs <= 0:
+    defaults = NOISE_PROFILE_DEFAULTS[noise_profile]
+    resolved_runs = runs if runs is not None else defaults.runs
+    resolved_max_energy_cv_pct = (
+        max_energy_cv_pct
+        if max_energy_cv_pct is not None
+        else defaults.max_energy_cv_pct
+    )
+    resolved_max_suite_cv_pct = (
+        max_suite_cv_pct
+        if max_suite_cv_pct is not None
+        else defaults.max_suite_cv_pct
+    )
+    resolved_max_unstable_fixtures = (
+        max_unstable_fixtures
+        if max_unstable_fixtures is not None
+        else defaults.max_unstable_fixtures
+    )
+
+    if resolved_runs <= 0:
         raise ValueError("runs must be greater than 0")
     if max_files <= 0:
         raise ValueError("max_files must be greater than 0")
-    if max_energy_cv_pct < 0:
+    if resolved_max_energy_cv_pct < 0:
         raise ValueError("max_energy_cv_pct must be greater than or equal to 0")
+    if resolved_max_suite_cv_pct < 0:
+        raise ValueError("max_suite_cv_pct must be greater than or equal to 0")
+    if resolved_max_unstable_fixtures < 0:
+        raise ValueError("max_unstable_fixtures must be greater than or equal to 0")
 
     fixtures = discover_benchmark_fixtures(fixtures_dir, max_files=max_files)
     if not fixtures:
@@ -72,7 +135,7 @@ def run_benchmark_suite(
         run_results = profile_script_repeated(
             fixture,
             collector=collector,
-            runs=runs,
+            runs=resolved_runs,
             cpu_energy_factor=cpu_energy_factor,
             memory_energy_factor=memory_energy_factor,
         )
@@ -88,12 +151,12 @@ def run_benchmark_suite(
         fixture_results.append(
             BenchmarkFixtureResult(
                 script=str(fixture),
-                runs=runs,
+                runs=resolved_runs,
                 energy_wh_mean=stats.estimated_energy_wh_mean,
                 energy_wh_median=stats.estimated_energy_wh_median,
                 energy_wh_stddev=stats.estimated_energy_wh_stddev,
                 energy_wh_cv_pct=energy_cv_pct,
-                unstable=energy_cv_pct > max_energy_cv_pct,
+                unstable=energy_cv_pct > resolved_max_energy_cv_pct,
             )
         )
 
@@ -105,14 +168,22 @@ def run_benchmark_suite(
         summary_cv_pct = round((summary_stddev / summary_mean) * 100.0, 6)
 
     unstable_fixtures = sum(1 for item in fixture_results if item.unstable)
+    acceptance_passed = (
+        unstable_fixtures <= resolved_max_unstable_fixtures
+        and summary_cv_pct <= resolved_max_suite_cv_pct
+    )
 
     return BenchmarkSuiteResult(
         fixtures_dir=str(fixtures_dir),
         collector=collector,
-        runs=runs,
-        max_energy_cv_pct=max_energy_cv_pct,
+        noise_profile=noise_profile,
+        runs=resolved_runs,
+        max_energy_cv_pct=resolved_max_energy_cv_pct,
+        max_suite_cv_pct=resolved_max_suite_cv_pct,
+        max_unstable_fixtures=resolved_max_unstable_fixtures,
         total_fixtures=len(fixture_results),
         unstable_fixtures=unstable_fixtures,
+        acceptance_passed=acceptance_passed,
         summary_energy_wh_mean=summary_mean,
         summary_energy_wh_median=round(median(median_energy_values), 6),
         summary_energy_wh_stddev=summary_stddev,

@@ -24,6 +24,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Path to benchmark fixture directory (default: benchmarks/fixtures)",
     )
     parser.add_argument(
+        "--noise-profile",
+        choices=["idle", "warm", "cpu-bound"],
+        default="warm",
+        help="Noise profile preset for runs and acceptance defaults",
+    )
+    parser.add_argument(
         "--collector",
         choices=["placeholder", "runtime"],
         default="placeholder",
@@ -32,8 +38,8 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     parser.add_argument(
         "--runs",
         type=int,
-        default=5,
-        help="Number of runs per fixture (default: 5)",
+        default=None,
+        help="Number of runs per fixture (default depends on --noise-profile)",
     )
     parser.add_argument(
         "--max-files",
@@ -45,12 +51,29 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         "--max-energy-cv-pct",
         type=float,
         default=None,
-        help="Maximum allowed energy coefficient of variation (%%) per fixture",
+        help="Maximum allowed energy CV (%%) per fixture (default depends on profile)",
+    )
+    parser.add_argument(
+        "--max-suite-cv-pct",
+        type=float,
+        default=None,
+        help="Maximum allowed suite-level CV (%%) across fixture medians",
+    )
+    parser.add_argument(
+        "--max-unstable-fixtures",
+        type=int,
+        default=None,
+        help="Maximum allowed unstable fixtures before acceptance fails",
     )
     parser.add_argument(
         "--fail-on-unstable",
         action="store_true",
         help="Return non-zero when at least one fixture is unstable",
+    )
+    parser.add_argument(
+        "--fail-on-acceptance",
+        action="store_true",
+        help="Return non-zero when acceptance thresholds are not met",
     )
     parser.add_argument(
         "--json",
@@ -63,7 +86,7 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
 def handle(args: argparse.Namespace) -> int:
     config = load_project_config(Path.cwd())
     threshold = args.max_energy_cv_pct
-    if threshold is None:
+    if threshold is None and args.noise_profile == "warm":
         threshold = config.stability_max_energy_cv_pct
 
     fixtures_dir = Path(args.fixtures_dir)
@@ -74,8 +97,11 @@ def handle(args: argparse.Namespace) -> int:
         result = run_benchmark_suite(
             fixtures_dir=fixtures_dir,
             collector=args.collector,
+            noise_profile=args.noise_profile,
             runs=args.runs,
             max_energy_cv_pct=threshold,
+            max_suite_cv_pct=args.max_suite_cv_pct,
+            max_unstable_fixtures=args.max_unstable_fixtures,
             max_files=args.max_files,
             cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
             memory_energy_factor=config.calibration_memory_wh_per_mb,
@@ -88,11 +114,14 @@ def handle(args: argparse.Namespace) -> int:
         "schemaVersion": CURRENT_SCHEMA_VERSION,
         "fixtures_dir": result.fixtures_dir,
         "collector": result.collector,
+        "noise_profile": result.noise_profile,
         "runs": result.runs,
         "max_energy_cv_pct": result.max_energy_cv_pct,
+        "max_suite_cv_pct": result.max_suite_cv_pct,
+        "max_unstable_fixtures": result.max_unstable_fixtures,
         "total_fixtures": result.total_fixtures,
         "unstable_fixtures": result.unstable_fixtures,
-        "status": "unstable" if result.unstable_fixtures > 0 else "stable",
+        "status": "passed" if result.acceptance_passed else "failed",
         "summary": {
             "energy_wh_mean": result.summary_energy_wh_mean,
             "energy_wh_median": result.summary_energy_wh_median,
@@ -123,21 +152,28 @@ def handle(args: argparse.Namespace) -> int:
         print(json.dumps(payload, indent=2))
         if args.fail_on_unstable and result.unstable_fixtures > 0:
             return 3
+        if args.fail_on_acceptance and not result.acceptance_passed:
+            return 4
         return 0
 
     print("EcoCode benchmark reproducibility")
     print(f"Fixtures dir:            {result.fixtures_dir}")
     print(f"Collector:               {result.collector}")
+    print(f"Noise profile:           {result.noise_profile}")
     print(f"Runs per fixture:        {result.runs}")
     print(f"Total fixtures:          {result.total_fixtures}")
     print(f"Unstable fixtures:       {result.unstable_fixtures}")
     print(f"Per-fixture CV limit:    {result.max_energy_cv_pct}%")
+    print(f"Suite CV limit:          {result.max_suite_cv_pct}%")
+    print(f"Max unstable fixtures:   {result.max_unstable_fixtures}")
     print(f"Suite median Wh:         {result.summary_energy_wh_median}")
     print(f"Suite stddev Wh:         {result.summary_energy_wh_stddev}")
     print(f"Suite CV (%):            {result.summary_energy_wh_cv_pct}")
-    print(f"Status:                  {'UNSTABLE' if result.unstable_fixtures > 0 else 'STABLE'}")
+    print(f"Status:                  {'PASSED' if result.acceptance_passed else 'FAILED'}")
 
     if args.fail_on_unstable and result.unstable_fixtures > 0:
         return 3
+    if args.fail_on_acceptance and not result.acceptance_passed:
+        return 4
 
     return 0
