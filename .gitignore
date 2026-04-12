@@ -201,6 +201,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# EcoCode local artifacts and private planning notes
+.ecocode/
+.local/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
