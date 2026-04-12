@@ -14,10 +14,62 @@ The project starts with a robust CLI core and expands toward workflow integratio
 
 Phase 1 has started with a first functional Python CLI prototype.
 
-- Command available: `ecocode profile <script>`
-- Command available: `ecocode profile-repo --root <path>`
+- Commands available:
+	- `ecocode profile <script>`
+	- `ecocode baseline create <script> -o <file>`
+	- `ecocode baseline compare <script> --baseline <file>`
+	- `ecocode profile-repo --root <path>`
 - Output modes: human-readable and JSON (`--json`)
+- Optional run history persistence: `--save-run`
+- Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
+
+## Features
+
+### Script profiling
+
+- Profile one script and get CPU, memory, estimated Wh, and sustainability score.
+- Supports JSON output for automation.
+
+Examples:
+- `ecocode profile path/to/script.py`
+- `ecocode profile path/to/script.py --json`
+- `ecocode profile path/to/script.py --save-run`
+
+### Baseline creation and regression checks
+
+- Create a baseline snapshot from a script run.
+- Compare current run against baseline.
+- Returns non-zero exit code on regression (`2`) for CI integration.
+
+Examples:
+- `ecocode baseline create path/to/script.py -o .ecocode/baseline.json`
+- `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json`
+- `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json --energy-threshold-pct 5`
+
+### Repository-wide profiling
+
+- Scan and profile supported source files in a repository.
+- Supports extension filters and max files limits.
+
+Examples:
+- `ecocode profile-repo --root .`
+- `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
+- `ecocode profile-repo --root . --json --save-run`
+
+### Audit history tracking
+
+- Save audit runs to a local history directory for progress tracking.
+- Configure behavior in `ecocode.toml`.
+- Default history path: `.ecocode/history`.
+
+### Project configuration (`ecocode.toml`)
+
+- `history.enabled`: enable or disable local history writing.
+- `history.auto_save`: save runs automatically without `--save-run`.
+- `history.dir`: set custom history directory.
+- `baseline.energy_threshold_pct`: default threshold for baseline compare.
+- `profile_repo.max_files`: default max files for repository profiling.
 
 ## Repository Structure
 
@@ -91,7 +143,7 @@ max_files = 50
 Run tests:
 
 ```bash
-pytest
+.venv/bin/python -m pytest -q
 ```
 
 ## Multi-Platform and Multi-Language Strategy
