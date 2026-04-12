@@ -24,6 +24,7 @@ Before opening a PR, contributors must validate that the project is healthy loca
    - `.venv/bin/ecocode --help`
    - `.venv/bin/ecocode profile demo.py --json`
    - `.venv/bin/ecocode profile demo.py --collector runtime --json`
+   - `.venv/bin/ecocode profile demo.py --collector runtime --runs 3 --json`
 
 PRs should be opened only after these checks pass.
 

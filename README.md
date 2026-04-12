@@ -25,6 +25,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
 - Runtime collection preview: `--collector runtime` (Linux/Unix-like)
+- Repeated-run mode for stability analysis: `--runs <n>`
 
 ## Features
 
@@ -33,10 +34,12 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Profile one script and get CPU, memory, estimated Wh, and sustainability score.
 - Supports JSON output for automation.
 - Supports collector selection: `--collector placeholder|runtime`.
+- Supports repeated-run statistics with `--runs` (mean/median/stddev).
 
 Examples:
 - `ecocode profile path/to/script.py`
 - `ecocode profile path/to/script.py --collector runtime`
+- `ecocode profile path/to/script.py --collector runtime --runs 5 --json`
 - `ecocode profile path/to/script.py --json`
 - `ecocode profile path/to/script.py --save-run`
 
@@ -51,6 +54,7 @@ Examples:
 - `ecocode baseline create path/to/script.py -o .ecocode/baseline.json --collector runtime`
 - `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json`
 - `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json --energy-threshold-pct 5`
+- `ecocode baseline compare path/to/script.py --baseline .ecocode/baseline.json --collector runtime --runs 5 --json`
 
 ### Repository-wide profiling
 
@@ -61,6 +65,7 @@ Examples:
 Examples:
 - `ecocode profile-repo --root .`
 - `ecocode profile-repo --root . --collector runtime`
+- `ecocode profile-repo --root . --collector runtime --runs 3 --json`
 - `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
 - `ecocode profile-repo --root . --json --save-run`
 - `ecocode profile-repo --root . --sarif-output .ecocode/reports/ecocode.sarif`
@@ -93,6 +98,7 @@ Examples:
 ### Reliability and Validation
 
 - The current metric engine is deterministic placeholder logic for workflow validation.
+- Runtime collector preview executes scripts and measures child process CPU/RSS via system usage data.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.

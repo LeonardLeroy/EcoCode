@@ -10,7 +10,8 @@
 - Done: project configuration support through `ecocode.toml`.
 - Done: extended reliability suite (contracts, aggregation, and property tests).
 - Done: Linux/Unix runtime collector preview (`--collector runtime`).
-- Next: process-tree-aware runtime collector and calibration pipeline.
+- Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
+- Next: process-tree-aware runtime collector v2 and calibration pipeline.
 
 ## Phase 1 - The Core
 
@@ -57,7 +58,7 @@
 2. Done: Add `ecocode baseline compare` command.
 3. Add JSON schema for profile report.
 4. Done: Add CSV export.
-5. Implement repeated-run median profile mode.
+5. Done: Implement repeated-run median profile mode.
 6. Add process tree profiling for subprocess-heavy scripts.
 7. Add configurable sampling interval.
 8. Done: Add project-level config file (`ecocode.toml`).
