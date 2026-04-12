@@ -21,6 +21,7 @@
 - Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
 - Optimizer MVP started with `ecocode optimize suggest` (rule-based deterministic mode).
 - Optimizer MVP includes `ecocode optimize patch` (deterministic candidate generation, Python-focused MVP).
+- Optimize policy is configurable via `ecocode.toml` (`[optimize]` allowlist, default rule, max patch changes).
 - Optimizer MVP includes `ecocode optimize evaluate` (candidate vs baseline regression gates).
 - Repository audit defaults expanded for major languages (Python, C/C++, C#, Rust, JS/TS, HTML/CSS, Assembly).
 

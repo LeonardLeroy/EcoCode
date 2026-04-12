@@ -182,6 +182,10 @@ Notes:
 - `calibration.cpu_wh_per_cpu_second`: calibration factor for CPU energy estimation.
 - `calibration.memory_wh_per_mb`: calibration factor for memory energy estimation.
 - `stability.max_energy_cv_pct`: default max coefficient of variation (%%) over repeated runs.
+- `optimize.enabled`: enable or disable `optimize patch`.
+- `optimize.allowed_patch_rule_ids`: restrict which patch rules the team accepts.
+- `optimize.default_patch_rule_id`: default rule used when `optimize patch` is run without `--rule-id`.
+- `optimize.max_patch_changes`: maximum number of edits a patch can apply before being rejected.
 
 ### Reliability and Validation
 
