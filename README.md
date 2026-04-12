@@ -64,14 +64,15 @@ Examples:
 
 - Scan and profile supported source files in a repository.
 - Supports extension filters and max files limits.
+- Supports include/exclude path globs for tighter scan scopes.
 - Supports SARIF export for CI and code-scanning integrations.
 
 Examples:
 - `ecocode profile-repo --root .`
 - `ecocode profile-repo --root . --collector runtime`
 - `ecocode profile-repo --root . --collector runtime --runs 3 --json`
-- `ecocode profile-repo --root . --collector runtime --runs 3 --max-energy-cv-pct 20 --fail-on-unstable --json`
 - `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
+- `ecocode profile-repo --root . --ext .py --include-glob "src/**/*.py" --exclude-glob "tests/*.py" --json`
 - `ecocode profile-repo --root . --json --save-run`
 - `ecocode profile-repo --root . --sarif-output .ecocode/reports/ecocode.sarif`
 

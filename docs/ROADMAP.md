@@ -64,7 +64,7 @@
 6. Done: Add process tree profiling for subprocess-heavy scripts (Linux preview).
 7. Add configurable sampling interval.
 8. Done: Add project-level config file (`ecocode.toml`).
-9. Add include/exclude path filters.
+9. Done: Add include/exclude path filters.
 10. Add Windows-specific process collector.
 11. Add Linux cgroup-aware measurements.
 12. Add macOS collector.
