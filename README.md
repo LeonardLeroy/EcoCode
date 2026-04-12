@@ -166,6 +166,33 @@ Notes:
 - `optimize evaluate` compares candidate energy against the baseline median and applies stability gates.
 - The deterministic optimizer is the bridge to local LLMs later, because the validation path already exists.
 
+### Local LLM setup (Ollama)
+
+To enable local-model suggestions in `optimize suggest`:
+
+1. Install Ollama.
+2. Pull a coding model (recommended first choice: `qwen2.5-coder:7b`).
+3. Configure `ecocode.toml`:
+
+```toml
+[optimize.llm]
+enabled = true
+provider = "ollama"
+model = "qwen2.5-coder:7b"
+max_suggestions = 3
+timeout_seconds = 20.0
+```
+
+Model guidance:
+- There is no universal single best model for every machine and codebase.
+- Prefer coding-focused models (`qwen2.5-coder`, `deepseek-coder`, `codellama`) over general MoE chat models.
+
+### Output modes
+
+- By default, commands print human-readable output.
+- JSON output is optional and mainly intended for CI/automation.
+- Use `--json` only when you need machine-readable data.
+
 ### Audit history tracking
 
 - Save audit runs to a local history directory for progress tracking.
