@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
+from ecocode.core.schemas import SchemaValidationError, validate_named_schema
 from ecocode.core.trend import collect_trend_points, summarize_trend
 
 
@@ -96,6 +97,11 @@ def handle(args: argparse.Namespace) -> int:
                 for point in points
             ],
         }
+        try:
+            validate_named_schema("trend_report", payload)
+        except SchemaValidationError as exc:
+            print(f"Output schema validation failed: {exc}")
+            return 1
         print(json.dumps(payload, indent=2))
         return 0
 

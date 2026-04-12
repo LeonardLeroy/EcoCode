@@ -12,6 +12,7 @@ from ecocode.core.repository_profiler import (
     DEFAULT_SCRIPT_EXTENSIONS,
     profile_repository,
 )
+from ecocode.core.schemas import SchemaValidationError, validate_named_schema
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -182,6 +183,12 @@ def handle(args: argparse.Namespace) -> int:
             for entry in result.results
         ],
     }
+
+    try:
+        validate_named_schema("repo_report", payload)
+    except SchemaValidationError as exc:
+        print(f"Output schema validation failed: {exc}")
+        return 1
 
     if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
         write_audit_run(
