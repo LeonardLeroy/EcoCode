@@ -1,0 +1,56 @@
+name: EcoCode Profile Repo
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  profile-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install EcoCode
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run repository profile
+        run: |
+          mkdir -p .ecocode/reports
+          ecocode profile-repo \
+            --root . \
+            --ext .py \
+            --max-files 200 \
+            --collector placeholder \
+            --runs 3 \
+            --json \
+            --sarif-output .ecocode/reports/ecocode.sarif \
+            > .ecocode/reports/profile-repo.json
+
+      - name: Upload EcoCode artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecocode-reports
+          path: .ecocode/reports/
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: .ecocode/reports/ecocode.sarif
+          category: ecocode-profile-repo
