@@ -12,7 +12,8 @@
 - Done: Linux/Unix runtime collector preview (`--collector runtime`).
 - Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
-- Next: calibration pipeline and benchmark reproducibility hardening.
+- Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
+- Next: benchmark reproducibility hardening and external metrology validation.
 
 ## Phase 1 - The Core
 

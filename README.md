@@ -27,6 +27,8 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Runtime collection preview: `--collector runtime` (Linux/Unix-like)
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
+- Calibration factors configurable via `ecocode.toml`.
+- Stability gate options: `--max-energy-cv-pct` and `--fail-on-unstable`.
 
 ## Features
 
@@ -41,6 +43,7 @@ Examples:
 - `ecocode profile path/to/script.py`
 - `ecocode profile path/to/script.py --collector runtime`
 - `ecocode profile path/to/script.py --collector runtime --runs 5 --json`
+- `ecocode profile path/to/script.py --collector runtime --runs 5 --max-energy-cv-pct 20 --fail-on-unstable --json`
 - `ecocode profile path/to/script.py --json`
 - `ecocode profile path/to/script.py --save-run`
 
@@ -67,6 +70,7 @@ Examples:
 - `ecocode profile-repo --root .`
 - `ecocode profile-repo --root . --collector runtime`
 - `ecocode profile-repo --root . --collector runtime --runs 3 --json`
+- `ecocode profile-repo --root . --collector runtime --runs 3 --max-energy-cv-pct 20 --fail-on-unstable --json`
 - `ecocode profile-repo --root . --ext .py --ext .js --max-files 100`
 - `ecocode profile-repo --root . --json --save-run`
 - `ecocode profile-repo --root . --sarif-output .ecocode/reports/ecocode.sarif`
@@ -95,11 +99,15 @@ Examples:
 - `history.dir`: set custom history directory.
 - `baseline.energy_threshold_pct`: default threshold for baseline compare.
 - `profile_repo.max_files`: default max files for repository profiling.
+- `calibration.cpu_wh_per_cpu_second`: calibration factor for CPU energy estimation.
+- `calibration.memory_wh_per_mb`: calibration factor for memory energy estimation.
+- `stability.max_energy_cv_pct`: default max coefficient of variation (%%) over repeated runs.
 
 ### Reliability and Validation
 
 - The current metric engine is deterministic placeholder logic for workflow validation.
 - Runtime collector preview executes scripts and samples process-group CPU/RSS (Linux) for subprocess-aware measurements.
+- Repeated runs expose mean/median/stddev and CV to gate unstable measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.
@@ -189,6 +197,13 @@ energy_threshold_pct = 5.0
 
 [profile_repo]
 max_files = 50
+
+[calibration]
+cpu_wh_per_cpu_second = 0.07
+memory_wh_per_mb = 0.003
+
+[stability]
+max_energy_cv_pct = 35.0
 ```
 
 Run tests:
