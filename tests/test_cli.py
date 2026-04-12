@@ -26,6 +26,20 @@ def test_profile_command_missing_script(capsys) -> None:
     assert "Script not found" in captured.out
 
 
+def test_profile_command_json_with_runs(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text("print('hello')\n", encoding="utf-8")
+
+    exit_code = main(["profile", str(script), "--json", "--runs", "3"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["runs"] == 3
+    assert "summary" in payload
+    assert len(payload["measurements"]) == 3
+
+
 def test_baseline_create_and_compare_pass(tmp_path: Path, capsys) -> None:
     script = tmp_path / "demo.py"
     script.write_text("print('hello')\n", encoding="utf-8")
@@ -87,3 +101,43 @@ def test_baseline_compare_regression_exit_code(tmp_path: Path, capsys) -> None:
 
     assert compare_exit == 2
     assert "FAILED" in compare_output.out
+
+
+def test_baseline_create_and_compare_with_runs(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text("print('hello')\n", encoding="utf-8")
+    baseline_file = tmp_path / "baseline-runs.json"
+
+    create_exit = main(
+        [
+            "baseline",
+            "create",
+            str(script),
+            "-o",
+            str(baseline_file),
+            "--runs",
+            "3",
+        ]
+    )
+    _ = capsys.readouterr()
+
+    assert create_exit == 0
+
+    compare_exit = main(
+        [
+            "baseline",
+            "compare",
+            str(script),
+            "--baseline",
+            str(baseline_file),
+            "--runs",
+            "3",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert compare_exit == 0
+    payload = json.loads(output.out)
+    assert payload["runs"] == 3
+    assert "current_statistics" in payload

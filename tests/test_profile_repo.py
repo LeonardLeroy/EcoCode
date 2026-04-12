@@ -72,3 +72,26 @@ def test_profile_repo_writes_sarif(tmp_path: Path, capsys) -> None:
     payload = json.loads(sarif_path.read_text(encoding="utf-8"))
     assert payload["version"] == "2.1.0"
     assert payload["runs"][0]["tool"]["driver"]["name"] == "EcoCode"
+
+
+def test_profile_repo_json_with_runs_summary(tmp_path: Path, capsys) -> None:
+    (tmp_path / "a.py").write_text("print('a')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "profile-repo",
+            "--root",
+            str(tmp_path),
+            "--ext",
+            ".py",
+            "--runs",
+            "3",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["runs"] == 3
+    assert "summary" in payload

@@ -8,6 +8,17 @@ from ecocode.cli import main
 
 PROFILE_KEYS = {
     "script",
+    "collector",
+    "runs",
+    "cpu_seconds",
+    "memory_mb",
+    "estimated_energy_wh",
+    "sustainability_score",
+}
+
+
+MEASUREMENT_KEYS = {
+    "script",
     "cpu_seconds",
     "memory_mb",
     "estimated_energy_wh",
@@ -17,11 +28,14 @@ PROFILE_KEYS = {
 
 REPO_KEYS = {
     "root",
+    "collector",
+    "runs",
     "total_files",
     "total_cpu_seconds",
     "total_memory_mb",
     "total_energy_wh",
     "average_sustainability_score",
+    "summary",
     "extensions",
     "files",
 }
@@ -76,6 +90,8 @@ def test_baseline_compare_json_contract(tmp_path: Path, capsys) -> None:
 
     expected_keys = {
         "baseline_path",
+        "collector",
+        "runs",
         "threshold_pct",
         "baseline_energy_wh",
         "current_energy_wh",
@@ -83,9 +99,10 @@ def test_baseline_compare_json_contract(tmp_path: Path, capsys) -> None:
         "regression",
         "status",
         "current",
+        "current_statistics",
     }
     assert set(payload.keys()) == expected_keys
-    assert set(payload["current"].keys()) == PROFILE_KEYS
+    assert set(payload["current"].keys()) == MEASUREMENT_KEYS
 
 
 def test_profile_repo_json_contract(tmp_path: Path, capsys) -> None:
@@ -109,7 +126,7 @@ def test_profile_repo_json_contract(tmp_path: Path, capsys) -> None:
 
     assert isinstance(payload["files"], list)
     if payload["files"]:
-        assert set(payload["files"][0].keys()) == PROFILE_KEYS
+        assert set(payload["files"][0].keys()) == MEASUREMENT_KEYS
 
 
 def test_trend_json_contract(tmp_path: Path, monkeypatch, capsys) -> None:
