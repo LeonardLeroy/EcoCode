@@ -313,12 +313,80 @@ TREND_REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
+BENCHMARK_REPORT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "fixtures_dir",
+        "collector",
+        "runs",
+        "max_energy_cv_pct",
+        "total_fixtures",
+        "unstable_fixtures",
+        "status",
+        "summary",
+        "fixtures",
+    ],
+    "properties": {
+        "fixtures_dir": {"type": "string"},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "runs": {"type": "integer", "minimum": 1},
+        "max_energy_cv_pct": {"type": "number", "minimum": 0},
+        "total_fixtures": {"type": "integer", "minimum": 0},
+        "unstable_fixtures": {"type": "integer", "minimum": 0},
+        "status": {"type": "string", "enum": ["stable", "unstable"]},
+        "summary": {
+            "type": "object",
+            "required": [
+                "energy_wh_mean",
+                "energy_wh_median",
+                "energy_wh_stddev",
+                "energy_wh_cv_pct",
+            ],
+            "properties": {
+                "energy_wh_mean": {"type": "number"},
+                "energy_wh_median": {"type": "number"},
+                "energy_wh_stddev": {"type": "number"},
+                "energy_wh_cv_pct": {"type": "number"},
+            },
+            "additionalProperties": False,
+        },
+        "fixtures": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "script",
+                    "runs",
+                    "energy_wh_mean",
+                    "energy_wh_median",
+                    "energy_wh_stddev",
+                    "energy_wh_cv_pct",
+                    "unstable",
+                ],
+                "properties": {
+                    "script": {"type": "string"},
+                    "runs": {"type": "integer", "minimum": 1},
+                    "energy_wh_mean": {"type": "number"},
+                    "energy_wh_median": {"type": "number"},
+                    "energy_wh_stddev": {"type": "number"},
+                    "energy_wh_cv_pct": {"type": "number"},
+                    "unstable": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    "additionalProperties": False,
+}
+
+
 SCHEMAS: dict[str, dict[str, Any]] = {
     "profile_report": PROFILE_REPORT_SCHEMA,
     "baseline_file": BASELINE_FILE_SCHEMA,
     "baseline_compare": BASELINE_COMPARE_SCHEMA,
     "repo_report": REPO_REPORT_SCHEMA,
     "trend_report": TREND_REPORT_SCHEMA,
+    "benchmark_report": BENCHMARK_REPORT_SCHEMA,
 }
 
 
