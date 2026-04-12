@@ -342,3 +342,31 @@ def test_optimize_patch_requires_patchable_rule(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 1
     assert "No patchable optimization suggestion" in output.out
+
+
+def test_optimize_patch_py002_rule_success(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text(
+        "result = ''\nfor item in [1, 2, 3]:\n    result += 'x'\nprint(result)\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "optimize",
+            "patch",
+            str(script),
+            "--rule-id",
+            "PY002",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["rule_id"] == "PY002"
+    candidate_source = Path(payload["candidate_path"]).read_text(encoding="utf-8")
+    assert "_result_parts = []" in candidate_source
+    assert ".append('x')" in candidate_source
+    assert "result = ''.join(_result_parts)" in candidate_source

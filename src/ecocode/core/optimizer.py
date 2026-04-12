@@ -121,7 +121,7 @@ def _select_patch_suggestion(
     suggestions: list[OptimizationSuggestion],
     rule_id: str | None,
 ) -> OptimizationSuggestion | None:
-    patchable_rule_ids = {"PY001"}
+    patchable_rule_ids = {"PY001", "PY002"}
     if rule_id is not None:
         for item in suggestions:
             if item.rule_id == rule_id and item.rule_id in patchable_rule_ids:
@@ -135,9 +135,14 @@ def _select_patch_suggestion(
 
 
 def _apply_python_patch_strategy(source: str, rule_id: str) -> tuple[str, int]:
-    if rule_id != "PY001":
-        return source, 0
+    if rule_id == "PY001":
+        return _apply_python_direct_iteration_patch(source)
+    if rule_id == "PY002":
+        return _apply_python_string_concat_patch(source)
+    return source, 0
 
+
+def _apply_python_direct_iteration_patch(source: str) -> tuple[str, int]:
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
@@ -189,6 +194,170 @@ def _apply_python_patch_strategy(source: str, rule_id: str) -> tuple[str, int]:
         updated_source += "\n"
 
     return updated_source, len(replacement_lines)
+
+
+def _apply_python_string_concat_patch(source: str) -> tuple[str, int]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise ValueError(f"Failed to parse Python source for patching: {exc}") from exc
+
+    lines = source.splitlines()
+    replacement_lines: dict[int, str] = {}
+    insert_before: dict[int, list[str]] = {}
+    insert_after: dict[int, list[str]] = {}
+
+    for body in _iter_statement_bodies(tree):
+        for index, statement in enumerate(body):
+            if not isinstance(statement, ast.For):
+                continue
+
+            transforms = _collect_loop_concat_transforms(source, statement, body, index)
+            if not transforms:
+                continue
+
+            for variable_name, parts_name, aug_assign in transforms:
+                if aug_assign.lineno < 1 or aug_assign.lineno > len(lines):
+                    continue
+
+                expr_source = ast.get_source_segment(source, aug_assign.value)
+                if expr_source is None:
+                    continue
+
+                original_line = lines[aug_assign.lineno - 1]
+                indent = _leading_whitespace(original_line)
+                replacement_lines[aug_assign.lineno - 1] = f"{indent}{parts_name}.append({expr_source})"
+
+                for_indent = _leading_whitespace(lines[statement.lineno - 1])
+                before_line = f"{for_indent}{parts_name} = []"
+                after_line = f"{for_indent}{variable_name} = ''.join({parts_name})"
+
+                insert_before.setdefault(statement.lineno, [])
+                if before_line not in insert_before[statement.lineno]:
+                    insert_before[statement.lineno].append(before_line)
+
+                end_line = statement.end_lineno or statement.lineno
+                insert_after.setdefault(end_line, [])
+                if after_line not in insert_after[end_line]:
+                    insert_after[end_line].append(after_line)
+
+    if not replacement_lines and not insert_before and not insert_after:
+        return source, 0
+
+    rebuilt: list[str] = []
+    for line_number, original_line in enumerate(lines, start=1):
+        for line in insert_before.get(line_number, []):
+            rebuilt.append(line)
+
+        replacement = replacement_lines.get(line_number - 1)
+        rebuilt.append(replacement if replacement is not None else original_line)
+
+        for line in insert_after.get(line_number, []):
+            rebuilt.append(line)
+
+    updated_source = "\n".join(rebuilt)
+    if source.endswith("\n"):
+        updated_source += "\n"
+
+    changes_count = len(replacement_lines) + sum(len(v) for v in insert_before.values()) + sum(
+        len(v) for v in insert_after.values()
+    )
+    return updated_source, changes_count
+
+
+def _iter_statement_bodies(root: ast.AST) -> list[list[ast.stmt]]:
+    bodies: list[list[ast.stmt]] = []
+
+    def visit(node: ast.AST) -> None:
+        for field_name in ("body", "orelse", "finalbody"):
+            maybe_body = getattr(node, field_name, None)
+            if isinstance(maybe_body, list) and maybe_body and all(
+                isinstance(item, ast.stmt) for item in maybe_body
+            ):
+                typed_body = maybe_body
+                bodies.append(typed_body)
+                for item in typed_body:
+                    visit(item)
+
+    visit(root)
+    return bodies
+
+
+def _collect_loop_concat_transforms(
+    source: str,
+    loop_statement: ast.For,
+    parent_body: list[ast.stmt],
+    loop_index: int,
+) -> list[tuple[str, str, ast.AugAssign]]:
+    transforms: list[tuple[str, str, ast.AugAssign]] = []
+
+    for loop_item in loop_statement.body:
+        if not isinstance(loop_item, ast.AugAssign):
+            continue
+        if not isinstance(loop_item.op, ast.Add):
+            continue
+        if not isinstance(loop_item.target, ast.Name):
+            continue
+        if not isinstance(loop_item.value, ast.Constant) or not isinstance(loop_item.value.value, str):
+            continue
+
+        variable_name = loop_item.target.id
+        if _find_latest_empty_string_initializer(parent_body, loop_index, variable_name) is None:
+            continue
+        if _name_loaded_in_statements(loop_statement.body, variable_name):
+            continue
+
+        parts_name = _choose_unique_parts_name(variable_name, source)
+        transforms.append((variable_name, parts_name, loop_item))
+
+    return transforms
+
+
+def _find_latest_empty_string_initializer(
+    statements: list[ast.stmt],
+    stop_index: int,
+    variable_name: str,
+) -> ast.Assign | None:
+    for statement in reversed(statements[:stop_index]):
+        if not isinstance(statement, ast.Assign):
+            continue
+        if len(statement.targets) != 1:
+            continue
+        target = statement.targets[0]
+        if not isinstance(target, ast.Name) or target.id != variable_name:
+            continue
+        if not isinstance(statement.value, ast.Constant) or statement.value.value != "":
+            continue
+        return statement
+    return None
+
+
+def _name_loaded_in_statements(statements: list[ast.stmt], variable_name: str) -> bool:
+    for statement in statements:
+        for node in ast.walk(statement):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == variable_name:
+                return True
+    return False
+
+
+def _choose_unique_parts_name(variable_name: str, source: str) -> str:
+    base_name = f"_{variable_name}_parts"
+    if re.search(rf"\b{re.escape(base_name)}\b", source) is None:
+        return base_name
+
+    counter = 2
+    while True:
+        candidate = f"{base_name}{counter}"
+        if re.search(rf"\b{re.escape(candidate)}\b", source) is None:
+            return candidate
+        counter += 1
+
+
+def _leading_whitespace(line: str) -> str:
+    matched = re.match(r"^\s*", line)
+    if matched is None:
+        return ""
+    return matched.group(0)
 
 
 def _extract_range_len_collection_name(iter_node: ast.Call) -> str | None:
