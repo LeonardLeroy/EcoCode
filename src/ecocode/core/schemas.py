@@ -441,6 +441,46 @@ OPTIMIZE_SUGGEST_REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
+OPTIMIZE_EVALUATE_REPORT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "schemaVersion",
+        "command",
+        "baseline_path",
+        "candidate_path",
+        "collector",
+        "runs",
+        "threshold_pct",
+        "baseline_energy_wh",
+        "candidate_energy_wh",
+        "increase_pct",
+        "regression",
+        "status",
+        "candidate",
+        "candidate_statistics",
+        "stability",
+    ],
+    "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "enum": ["optimize evaluate"]},
+        "baseline_path": {"type": "string"},
+        "candidate_path": {"type": "string"},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "runs": {"type": "integer", "minimum": 1},
+        "threshold_pct": {"type": "number"},
+        "baseline_energy_wh": {"type": "number"},
+        "candidate_energy_wh": {"type": "number"},
+        "increase_pct": {"type": "number"},
+        "regression": {"type": "boolean"},
+        "status": {"type": "string", "enum": ["passed", "failed"]},
+        "candidate": BASELINE_FILE_SCHEMA["properties"]["baseline"],
+        "candidate_statistics": BASELINE_COMPARE_SCHEMA["properties"]["current_statistics"],
+        "stability": BASELINE_COMPARE_SCHEMA["properties"]["stability"],
+    },
+    "additionalProperties": False,
+}
+
+
 SCHEMAS: dict[str, dict[str, Any]] = {
     "profile_report": PROFILE_REPORT_SCHEMA,
     "baseline_file": BASELINE_FILE_SCHEMA,
@@ -449,6 +489,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "trend_report": TREND_REPORT_SCHEMA,
     "benchmark_report": BENCHMARK_REPORT_SCHEMA,
     "optimize_suggest_report": OPTIMIZE_SUGGEST_REPORT_SCHEMA,
+    "optimize_evaluate_report": OPTIMIZE_EVALUATE_REPORT_SCHEMA,
 }
 
 
