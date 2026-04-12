@@ -88,3 +88,31 @@ def test_trend_invalid_limit(capsys) -> None:
 
     assert exit_code == 1
     assert "--limit must be greater than 0" in output.out
+
+
+def test_trend_writes_csv(tmp_path: Path, monkeypatch, capsys) -> None:
+    history = tmp_path / ".ecocode" / "history"
+    history.mkdir(parents=True, exist_ok=True)
+
+    (history / "20260412T100000000000Z_profile.json").write_text(
+        json.dumps(
+            {
+                "command": "profile",
+                "result": {"estimated_energy_wh": 1.0},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    csv_output = tmp_path / "reports" / "trend.csv"
+    monkeypatch.chdir(tmp_path)
+    exit_code = main(["trend", "--csv-output", str(csv_output)])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    assert csv_output.exists()
+    assert "CSV written:" in output.out
+
+    csv_content = csv_output.read_text(encoding="utf-8")
+    assert "timestamp,command,energy_wh" in csv_content
+    assert "profile,1.0" in csv_content
