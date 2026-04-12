@@ -17,6 +17,7 @@
 - Linux cgroup-aware measurements for runtime collector (container-aware memory path).
 - GitHub Action prototype for `profile-repo` with SARIF publication.
 - `schemaVersion` policy with compatibility tests for JSON payloads.
+- Benchmark noise profiles (`idle`, `warm`, `cpu-bound`) and acceptance thresholds.
 
 ### In Progress
 
@@ -29,11 +30,11 @@
 
 ## Priority Issues
 
-1. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
-2. Add configurable sampling interval for runtime collectors.
-3. Add macOS process-tree-aware runtime collector path.
-4. Add static rules engine skeleton for early anti-pattern checks.
-5. Add baseline/result migration helpers for future schema upgrades.
+1. Add configurable sampling interval for runtime collectors.
+2. Add macOS process-tree-aware runtime collector path.
+3. Add static rules engine skeleton for early anti-pattern checks.
+4. Add baseline/result migration helpers for future schema upgrades.
+5. Add benchmark profile presets in `ecocode.toml` for team-wide reproducibility policy.
 
 ## Current Delivery Snapshot
 
@@ -51,6 +52,7 @@
 - Done: Linux cgroup-aware memory sampling for containerized runtime contexts.
 - Done: GitHub Action prototype to run `profile-repo` and upload SARIF.
 - Done: `schemaVersion` policy and compatibility tests for JSON outputs.
+- Done: benchmark noise profiles and acceptance threshold gating.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
 - Next: benchmark reproducibility hardening (noise controls + acceptance profiles) and external metrology validation.
 

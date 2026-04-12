@@ -95,13 +95,16 @@ Examples:
 ### Benchmark reproducibility
 
 - Run deterministic fixture scripts repeatedly and evaluate stability.
-- Reports median and coefficient of variation (CV) per fixture.
-- Returns exit code `3` with `--fail-on-unstable` when any fixture exceeds CV threshold.
+- Supports noise profiles: `idle`, `warm`, `cpu-bound`.
+- Reports per-fixture CV and suite-level CV with acceptance thresholds.
+- Returns exit code `3` with `--fail-on-unstable` when any fixture exceeds per-fixture CV threshold.
+- Returns exit code `4` with `--fail-on-acceptance` when acceptance thresholds are not met.
 
 Examples:
 - `ecocode benchmark`
-- `ecocode benchmark --fixtures-dir benchmarks/fixtures --runs 7 --json`
+- `ecocode benchmark --fixtures-dir benchmarks/fixtures --noise-profile cpu-bound --json`
 - `ecocode benchmark --collector runtime --runs 5 --max-energy-cv-pct 20 --fail-on-unstable`
+- `ecocode benchmark --max-suite-cv-pct 8 --max-unstable-fixtures 0 --fail-on-acceptance --json`
 
 ### Audit history tracking
 
@@ -315,19 +318,23 @@ Interpretation:
 Command:
 
 ```bash
-ecocode benchmark --fixtures-dir benchmarks/fixtures --runs 7 --json
+ecocode benchmark --fixtures-dir benchmarks/fixtures --noise-profile warm --json
 ```
 
 Example JSON excerpt:
 
 ```json
 {
+	"schemaVersion": 1,
 	"fixtures_dir": "/workspace/benchmarks/fixtures",
+	"noise_profile": "warm",
 	"runs": 7,
 	"max_energy_cv_pct": 20.0,
+	"max_suite_cv_pct": 10.0,
+	"max_unstable_fixtures": 0,
 	"total_fixtures": 3,
 	"unstable_fixtures": 1,
-	"status": "unstable",
+	"status": "failed",
 	"summary": {
 		"energy_wh_mean": 0.1482,
 		"energy_wh_median": 0.1421,
@@ -339,8 +346,11 @@ Example JSON excerpt:
 
 Interpretation:
 - This command measures reproducibility of benchmark fixtures.
-- `unstable_fixtures` tells you how many fixtures exceeded CV threshold.
-- With `--fail-on-unstable`, exit code `3` signals unstable benchmark quality.
+- `noise_profile` applies tuned defaults for run count and acceptance thresholds.
+- `unstable_fixtures` counts fixtures above per-fixture CV threshold.
+- `status` reports acceptance outcome from suite-level gates.
+- `--fail-on-unstable` returns exit `3` when any fixture exceeds per-fixture CV limits.
+- `--fail-on-acceptance` returns exit `4` when full suite acceptance fails.
 
 ### 6) `ecocode trend`
 
