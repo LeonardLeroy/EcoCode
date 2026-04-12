@@ -29,6 +29,7 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Runtime collection preview: `--collector runtime` (Linux/macOS/Windows)
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
+- Linux runtime collector also samples cgroup memory usage (when available) for container-aware measurements.
 - Windows runtime collector preview samples process working-set memory for profiled scripts.
 - Calibration factors configurable via `ecocode.toml`.
 - Stability gate options: `--max-energy-cv-pct` and `--fail-on-unstable`.
@@ -121,7 +122,7 @@ Examples:
 ### Reliability and Validation
 
 - The current metric engine is deterministic placeholder logic for workflow validation.
-- Runtime collector preview executes scripts with platform backends (Linux process-group sampling, macOS children usage, Windows working-set sampling).
+- Runtime collector preview executes scripts with platform backends (Linux process-group + cgroup-aware memory sampling, macOS children usage, Windows working-set sampling).
 - Repeated runs expose mean/median/stddev and CV to gate unstable measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Central schema validation enforces stable JSON payload structures across commands.

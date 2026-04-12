@@ -14,6 +14,7 @@
 - JSON schema validation enforced for `profile`, `baseline compare`, `profile-repo`, and `trend` outputs.
 - Benchmark reproducibility runner with fixture pack (`ecocode benchmark`).
 - Windows runtime collector backend preview.
+- Linux cgroup-aware measurements for runtime collector (container-aware memory path).
 
 ### In Progress
 
@@ -22,16 +23,15 @@
 
 ### Next
 
-- Linux cgroup-aware measurements.
 - GitHub Action prototype for CI integration.
 
 ## Priority Issues
 
-1. Add Linux cgroup-aware metrics path for containerized workloads.
-2. Publish first GitHub Action to run profile-repo and upload SARIF.
-3. Define `schemaVersion` policy and compatibility tests for future payload evolution.
-4. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
-5. Add configurable sampling interval for runtime collectors.
+1. Publish first GitHub Action to run profile-repo and upload SARIF.
+2. Define `schemaVersion` policy and compatibility tests for future payload evolution.
+3. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
+4. Add configurable sampling interval for runtime collectors.
+5. Add macOS process-tree-aware runtime collector path.
 
 ## Current Delivery Snapshot
 
@@ -46,6 +46,7 @@
 - Done: Windows runtime collector preview (`--collector runtime`).
 - Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
+- Done: Linux cgroup-aware memory sampling for containerized runtime contexts.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
 - Next: benchmark reproducibility hardening (noise controls + acceptance profiles) and external metrology validation.
 
@@ -100,7 +101,7 @@
 8. Done: Add project-level config file (`ecocode.toml`).
 9. Done: Add include/exclude path filters.
 10. Done: Add Windows-specific process collector (preview).
-11. Add Linux cgroup-aware measurements.
+11. Done: Add Linux cgroup-aware measurements.
 12. Add macOS collector.
 13. Done: Add deterministic benchmark fixture pack and reproducibility runner (`benchmark`).
 14. Done: Add SARIF output for CI tooling.
