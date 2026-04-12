@@ -85,6 +85,13 @@ Examples:
 - `baseline.energy_threshold_pct`: default threshold for baseline compare.
 - `profile_repo.max_files`: default max files for repository profiling.
 
+### Reliability and Validation
+
+- The current metric engine is deterministic placeholder logic for workflow validation.
+- Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
+- Use this command before any PR: `.venv/bin/python -m pytest -q`
+- Next reliability phase will introduce real runtime collectors and calibration.
+
 ## Repository Structure
 
 ```text
