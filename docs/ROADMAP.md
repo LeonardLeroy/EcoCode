@@ -26,15 +26,17 @@
 
 ### Next
 
-- Benchmark noise-control profiles and acceptance thresholds.
+- Add configurable sampling interval for runtime collectors.
+- Add macOS process-tree-aware runtime collector path.
+- Start Optimizer MVP (`suggest`, `patch`, `evaluate`) on top of existing benchmark gates.
 
 ## Priority Issues
 
 1. Add configurable sampling interval for runtime collectors.
 2. Add macOS process-tree-aware runtime collector path.
-3. Add static rules engine skeleton for early anti-pattern checks.
-4. Add baseline/result migration helpers for future schema upgrades.
-5. Add benchmark profile presets in `ecocode.toml` for team-wide reproducibility policy.
+3. Implement `ecocode optimize suggest` (rule-based recommendations + confidence score).
+4. Implement `ecocode optimize evaluate` (candidate vs baseline with existing acceptance gates).
+5. Prepare local LLM integration path (model runner abstraction + prompt contracts).
 
 ## Current Delivery Snapshot
 
@@ -84,6 +86,20 @@
 - Local SLM assistant for optimization suggestions.
 - Explainable recommendations with confidence and trade-offs.
 - Safety constraints and reproducible benchmark harness.
+
+### Phase 4.1 - Optimizer MVP (near-term)
+
+- `ecocode optimize suggest <script>`: produce optimization suggestions without code rewrite.
+- `ecocode optimize patch <script>`: generate candidate patch from selected strategy.
+- `ecocode optimize evaluate --baseline <file> --candidate <file>`: benchmark candidate and gate regression.
+- Keep deterministic fallback (rule engine) when no local model is configured.
+- Persist before/after evidence in JSON for CI review.
+
+### Phase 4.2 - Local LLM Integration
+
+- Add local model provider interface (Ollama/llama.cpp compatible backends).
+- Start with small coding models for low VRAM environments, then scale up to larger models when hardware allows.
+- Add prompt/test harness to compare candidate quality and ensure reproducibility.
 
 ## Parallel Tracks (cross-phase)
 
