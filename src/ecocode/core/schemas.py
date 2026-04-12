@@ -399,6 +399,48 @@ BENCHMARK_REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
+OPTIMIZE_SUGGEST_REPORT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "schemaVersion",
+        "command",
+        "script",
+        "suggestion_count",
+        "suggestions",
+    ],
+    "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "enum": ["optimize suggest"]},
+        "script": {"type": "string"},
+        "suggestion_count": {"type": "integer", "minimum": 0},
+        "suggestions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "rule_id",
+                    "title",
+                    "rationale",
+                    "impact",
+                    "confidence",
+                    "language",
+                ],
+                "properties": {
+                    "rule_id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "rationale": {"type": "string"},
+                    "impact": {"type": "string", "enum": ["low", "medium", "high"]},
+                    "confidence": {"type": "number"},
+                    "language": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    "additionalProperties": False,
+}
+
+
 SCHEMAS: dict[str, dict[str, Any]] = {
     "profile_report": PROFILE_REPORT_SCHEMA,
     "baseline_file": BASELINE_FILE_SCHEMA,
@@ -406,6 +448,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "repo_report": REPO_REPORT_SCHEMA,
     "trend_report": TREND_REPORT_SCHEMA,
     "benchmark_report": BENCHMARK_REPORT_SCHEMA,
+    "optimize_suggest_report": OPTIMIZE_SUGGEST_REPORT_SCHEMA,
 }
 
 
