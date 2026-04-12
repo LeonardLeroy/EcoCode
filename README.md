@@ -126,8 +126,19 @@ Examples:
 - Repeated runs expose mean/median/stddev and CV to gate unstable measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Central schema validation enforces stable JSON payload structures across commands.
+- A GitHub Actions workflow prototype runs `profile-repo` on CI and publishes SARIF/artifacts.
 - Use this command before any PR: `.venv/bin/python -m pytest -q`
 - Next reliability phase will introduce real runtime collectors and calibration.
+
+### CI automation prototype
+
+- Workflow file: `.github/workflows/ecocode-profile-repo.yml`
+- Trigger: pull requests, pushes to `main`, or manual dispatch.
+- Behavior:
+	- installs EcoCode,
+	- runs `ecocode profile-repo --json --sarif-output ...`,
+	- uploads JSON + SARIF artifacts,
+	- attempts SARIF publication to GitHub code scanning.
 
 ## Command Outputs And Interpretation
 

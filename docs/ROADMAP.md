@@ -15,6 +15,7 @@
 - Benchmark reproducibility runner with fixture pack (`ecocode benchmark`).
 - Windows runtime collector backend preview.
 - Linux cgroup-aware measurements for runtime collector (container-aware memory path).
+- GitHub Action prototype for `profile-repo` with SARIF publication.
 
 ### In Progress
 
@@ -23,15 +24,15 @@
 
 ### Next
 
-- GitHub Action prototype for CI integration.
+- Schema compatibility policy (`schemaVersion`) and migration tests.
 
 ## Priority Issues
 
-1. Publish first GitHub Action to run profile-repo and upload SARIF.
-2. Define `schemaVersion` policy and compatibility tests for future payload evolution.
-3. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
-4. Add configurable sampling interval for runtime collectors.
-5. Add macOS process-tree-aware runtime collector path.
+1. Define `schemaVersion` policy and compatibility tests for future payload evolution.
+2. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
+3. Add configurable sampling interval for runtime collectors.
+4. Add macOS process-tree-aware runtime collector path.
+5. Add static rules engine skeleton for early anti-pattern checks.
 
 ## Current Delivery Snapshot
 
@@ -47,6 +48,7 @@
 - Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
 - Done: Linux cgroup-aware memory sampling for containerized runtime contexts.
+- Done: GitHub Action prototype to run `profile-repo` and upload SARIF.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
 - Next: benchmark reproducibility hardening (noise controls + acceptance profiles) and external metrology validation.
 
@@ -105,7 +107,7 @@
 12. Add macOS collector.
 13. Done: Add deterministic benchmark fixture pack and reproducibility runner (`benchmark`).
 14. Done: Add SARIF output for CI tooling.
-15. Add GitHub Action prototype.
+15. Done: Add GitHub Action prototype.
 16. Add static rules engine skeleton.
 17. Add VS Code extension MVP (display profile report).
 18. Add plugin protocol between CLI and IDE.
