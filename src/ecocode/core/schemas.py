@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 
+CURRENT_SCHEMA_VERSION = 1
+
+
 class SchemaValidationError(ValueError):
     """Raised when a payload does not match the expected JSON schema."""
 
@@ -10,6 +13,7 @@ class SchemaValidationError(ValueError):
 PROFILE_REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": [
+        "schemaVersion",
         "script",
         "collector",
         "runs",
@@ -19,6 +23,7 @@ PROFILE_REPORT_SCHEMA: dict[str, Any] = {
         "sustainability_score",
     ],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "script": {"type": "string"},
         "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
         "runs": {"type": "integer", "minimum": 1},
@@ -86,8 +91,9 @@ PROFILE_REPORT_SCHEMA: dict[str, Any] = {
 
 BASELINE_FILE_SCHEMA: dict[str, Any] = {
     "type": "object",
-    "required": ["version", "collector", "runs", "baseline", "statistics"],
+    "required": ["schemaVersion", "version", "collector", "runs", "baseline", "statistics"],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "version": {"type": "integer"},
         "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
         "runs": {"type": "integer", "minimum": 1},
@@ -135,6 +141,7 @@ BASELINE_FILE_SCHEMA: dict[str, Any] = {
 BASELINE_COMPARE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": [
+        "schemaVersion",
         "baseline_path",
         "collector",
         "runs",
@@ -149,6 +156,7 @@ BASELINE_COMPARE_SCHEMA: dict[str, Any] = {
         "stability",
     ],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "baseline_path": {"type": "string"},
         "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
         "runs": {"type": "integer", "minimum": 1},
@@ -196,6 +204,7 @@ BASELINE_COMPARE_SCHEMA: dict[str, Any] = {
 REPO_REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": [
+        "schemaVersion",
         "root",
         "collector",
         "runs",
@@ -212,6 +221,7 @@ REPO_REPORT_SCHEMA: dict[str, Any] = {
         "files",
     ],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "root": {"type": "string"},
         "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
         "runs": {"type": "integer", "minimum": 1},
@@ -270,8 +280,9 @@ REPO_REPORT_SCHEMA: dict[str, Any] = {
 
 TREND_REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
-    "required": ["history_dir", "summary", "points"],
+    "required": ["schemaVersion", "history_dir", "summary", "points"],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "history_dir": {"type": "string"},
         "summary": {
             "type": "object",
@@ -316,6 +327,7 @@ TREND_REPORT_SCHEMA: dict[str, Any] = {
 BENCHMARK_REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": [
+        "schemaVersion",
         "fixtures_dir",
         "collector",
         "runs",
@@ -327,6 +339,7 @@ BENCHMARK_REPORT_SCHEMA: dict[str, Any] = {
         "fixtures",
     ],
     "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
         "fixtures_dir": {"type": "string"},
         "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
         "runs": {"type": "integer", "minimum": 1},

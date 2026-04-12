@@ -12,7 +12,11 @@ from ecocode.core.repository_profiler import (
     DEFAULT_SCRIPT_EXTENSIONS,
     profile_repository,
 )
-from ecocode.core.schemas import SchemaValidationError, validate_named_schema
+from ecocode.core.schemas import (
+    CURRENT_SCHEMA_VERSION,
+    SchemaValidationError,
+    validate_named_schema,
+)
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -156,6 +160,7 @@ def handle(args: argparse.Namespace) -> int:
     }
 
     payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
         "root": result.root,
         "collector": args.collector,
         "runs": args.runs,

@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
-from ecocode.core.schemas import SchemaValidationError, validate_named_schema
+from ecocode.core.schemas import (
+    CURRENT_SCHEMA_VERSION,
+    SchemaValidationError,
+    validate_named_schema,
+)
 from ecocode.core.trend import collect_trend_points, summarize_trend
 
 
@@ -86,6 +90,7 @@ def handle(args: argparse.Namespace) -> int:
 
     if args.json:
         payload = {
+            "schemaVersion": CURRENT_SCHEMA_VERSION,
             "history_dir": str(history_path),
             "summary": summary,
             "points": [

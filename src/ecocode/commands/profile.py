@@ -7,7 +7,11 @@ from pathlib import Path
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
 from ecocode.core.profiler import profile_script_repeated, summarize_profile_runs
-from ecocode.core.schemas import SchemaValidationError, validate_named_schema
+from ecocode.core.schemas import (
+    CURRENT_SCHEMA_VERSION,
+    SchemaValidationError,
+    validate_named_schema,
+)
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -90,6 +94,7 @@ def handle(args: argparse.Namespace) -> int:
     unstable = args.runs > 1 and energy_cv_pct > stability_threshold
 
     payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
         "script": result.script,
         "collector": args.collector,
         "runs": args.runs,

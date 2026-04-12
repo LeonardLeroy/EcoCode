@@ -11,7 +11,11 @@ from ecocode.core.profiler import (
     profile_script_repeated,
     summarize_profile_runs,
 )
-from ecocode.core.schemas import SchemaValidationError, validate_named_schema
+from ecocode.core.schemas import (
+    CURRENT_SCHEMA_VERSION,
+    SchemaValidationError,
+    validate_named_schema,
+)
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -139,6 +143,7 @@ def handle_create(args: argparse.Namespace) -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
         "version": 2,
         "collector": args.collector,
         "runs": args.runs,
@@ -245,6 +250,7 @@ def handle_compare(args: argparse.Namespace) -> int:
     exit_code = 2 if regression else 0
 
     response_payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
         "baseline_path": str(baseline_path),
         "collector": args.collector,
         "runs": args.runs,

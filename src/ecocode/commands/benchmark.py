@@ -6,7 +6,11 @@ from pathlib import Path
 
 from ecocode.core.benchmark import run_benchmark_suite
 from ecocode.core.config import load_project_config
-from ecocode.core.schemas import SchemaValidationError, validate_named_schema
+from ecocode.core.schemas import (
+    CURRENT_SCHEMA_VERSION,
+    SchemaValidationError,
+    validate_named_schema,
+)
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -81,6 +85,7 @@ def handle(args: argparse.Namespace) -> int:
         return 1
 
     payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
         "fixtures_dir": result.fixtures_dir,
         "collector": result.collector,
         "runs": result.runs,
