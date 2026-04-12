@@ -26,9 +26,10 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
-- Runtime collection preview: `--collector runtime` (Linux/Unix-like)
+- Runtime collection preview: `--collector runtime` (Linux/macOS/Windows)
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
+- Windows runtime collector preview samples process working-set memory for profiled scripts.
 - Calibration factors configurable via `ecocode.toml`.
 - Stability gate options: `--max-energy-cv-pct` and `--fail-on-unstable`.
 
@@ -120,7 +121,7 @@ Examples:
 ### Reliability and Validation
 
 - The current metric engine is deterministic placeholder logic for workflow validation.
-- Runtime collector preview executes scripts and samples process-group CPU/RSS (Linux) for subprocess-aware measurements.
+- Runtime collector preview executes scripts with platform backends (Linux process-group sampling, macOS children usage, Windows working-set sampling).
 - Repeated runs expose mean/median/stddev and CV to gate unstable measurements.
 - Test suite verifies CLI flows, JSON contracts, SARIF export, trend outputs, and aggregation consistency.
 - Central schema validation enforces stable JSON payload structures across commands.

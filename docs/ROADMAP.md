@@ -13,6 +13,7 @@
 - Reliability suite expanded (contracts, aggregation, properties, runtime behavior).
 - JSON schema validation enforced for `profile`, `baseline compare`, `profile-repo`, and `trend` outputs.
 - Benchmark reproducibility runner with fixture pack (`ecocode benchmark`).
+- Windows runtime collector backend preview.
 
 ### In Progress
 
@@ -21,17 +22,16 @@
 
 ### Next
 
-- Windows runtime collector.
 - Linux cgroup-aware measurements.
 - GitHub Action prototype for CI integration.
 
 ## Priority Issues
 
-1. Implement Windows runtime collector backend.
-2. Add Linux cgroup-aware metrics path for containerized workloads.
-3. Publish first GitHub Action to run profile-repo and upload SARIF.
-4. Define `schemaVersion` policy and compatibility tests for future payload evolution.
-5. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
+1. Add Linux cgroup-aware metrics path for containerized workloads.
+2. Publish first GitHub Action to run profile-repo and upload SARIF.
+3. Define `schemaVersion` policy and compatibility tests for future payload evolution.
+4. Add benchmark noise-control profiles (idle/warm/cpu-bound) and acceptance thresholds.
+5. Add configurable sampling interval for runtime collectors.
 
 ## Current Delivery Snapshot
 
@@ -43,6 +43,7 @@
 - Done: project configuration support through `ecocode.toml`.
 - Done: extended reliability suite (contracts, aggregation, and property tests).
 - Done: Linux/Unix runtime collector preview (`--collector runtime`).
+- Done: Windows runtime collector preview (`--collector runtime`).
 - Done: repeated-run profiling mode (`--runs`) with median/stddev summaries.
 - Done: Linux process-group sampling for subprocess-aware runtime profiling.
 - Done: calibration/stability config hooks (`[calibration]`, `[stability]`).
@@ -98,7 +99,7 @@
 7. Add configurable sampling interval.
 8. Done: Add project-level config file (`ecocode.toml`).
 9. Done: Add include/exclude path filters.
-10. Add Windows-specific process collector.
+10. Done: Add Windows-specific process collector (preview).
 11. Add Linux cgroup-aware measurements.
 12. Add macOS collector.
 13. Done: Add deterministic benchmark fixture pack and reproducibility runner (`benchmark`).
