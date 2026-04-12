@@ -11,6 +11,7 @@ from ecocode.core.profiler import (
     profile_script_repeated,
     summarize_profile_runs,
 )
+from ecocode.core.schemas import SchemaValidationError, validate_named_schema
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -150,6 +151,11 @@ def handle_create(args: argparse.Namespace) -> int:
             "memory_mb_median": summary.memory_mb_median,
         },
     }
+    try:
+        validate_named_schema("baseline_file", payload)
+    except SchemaValidationError as exc:
+        print(f"Output schema validation failed: {exc}")
+        return 1
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
@@ -262,6 +268,12 @@ def handle_compare(args: argparse.Namespace) -> int:
             "unstable": unstable,
         },
     }
+
+    try:
+        validate_named_schema("baseline_compare", response_payload)
+    except SchemaValidationError as exc:
+        print(f"Output schema validation failed: {exc}")
+        return 1
 
     if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
         write_audit_run(
