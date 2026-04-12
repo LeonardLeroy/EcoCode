@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,8 +49,12 @@ def discover_profile_targets(
     root: Path,
     extensions: set[str],
     max_files: int,
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
 ) -> list[Path]:
     targets: list[Path] = []
+    include_patterns = include_globs or []
+    exclude_patterns = exclude_globs or []
 
     for path in sorted(root.rglob("*")):
         if len(targets) >= max_files:
@@ -59,6 +64,17 @@ def discover_profile_targets(
             continue
 
         if any(part in SKIP_DIR_NAMES for part in path.parts):
+            continue
+
+        relative = path.relative_to(root).as_posix()
+        if include_patterns and not any(
+            fnmatch.fnmatch(relative, pattern) for pattern in include_patterns
+        ):
+            continue
+
+        if exclude_patterns and any(
+            fnmatch.fnmatch(relative, pattern) for pattern in exclude_patterns
+        ):
             continue
 
         if path.suffix.lower() in extensions:
@@ -74,12 +90,20 @@ def profile_repository(
     collector: CollectorType = "placeholder",
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
 ) -> RepoProfileResult:
     if not root.exists() or not root.is_dir():
         raise FileNotFoundError(f"Repository root not found: {root}")
 
     profile_extensions = extensions or DEFAULT_SCRIPT_EXTENSIONS
-    targets = discover_profile_targets(root, profile_extensions, max_files)
+    targets = discover_profile_targets(
+        root,
+        profile_extensions,
+        max_files,
+        include_globs=include_globs,
+        exclude_globs=exclude_globs,
+    )
 
     results = [
         profile_script(

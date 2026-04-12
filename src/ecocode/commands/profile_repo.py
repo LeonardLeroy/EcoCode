@@ -37,6 +37,18 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Extension to include (repeatable), example: --ext .py --ext .js",
     )
     parser.add_argument(
+        "--include-glob",
+        action="append",
+        default=[],
+        help="Only include files matching glob pattern (repeatable)",
+    )
+    parser.add_argument(
+        "--exclude-glob",
+        action="append",
+        default=[],
+        help="Exclude files matching glob pattern (repeatable)",
+    )
+    parser.add_argument(
         "--collector",
         choices=["placeholder", "runtime"],
         default="placeholder",
@@ -108,6 +120,8 @@ def handle(args: argparse.Namespace) -> int:
                 collector=args.collector,
                 cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
                 memory_energy_factor=config.calibration_memory_wh_per_mb,
+                include_globs=args.include_glob,
+                exclude_globs=args.exclude_glob,
             )
             for _ in range(args.runs)
         ]
@@ -155,6 +169,8 @@ def handle(args: argparse.Namespace) -> int:
             "unstable": unstable,
         },
         "extensions": sorted(extensions),
+        "include_globs": args.include_glob,
+        "exclude_globs": args.exclude_glob,
         "files": [
             {
                 "script": entry.script,
