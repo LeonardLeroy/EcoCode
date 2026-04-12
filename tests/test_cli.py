@@ -312,3 +312,33 @@ def test_optimize_evaluate_regression_exit_code(tmp_path: Path, capsys) -> None:
     assert exit_code == 2
     payload = json.loads(output.out)
     assert payload["regression"] is True
+
+
+def test_optimize_patch_json_success(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text(
+        "items = [1, 2, 3]\nfor i in range(len(items)):\n    print('ok')\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["optimize", "patch", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert payload["command"] == "optimize patch"
+    candidate_path = Path(payload["candidate_path"])
+    assert candidate_path.exists()
+    candidate_source = candidate_path.read_text(encoding="utf-8")
+    assert "for _ in items:" in candidate_source
+
+
+def test_optimize_patch_requires_patchable_rule(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "demo.py"
+    script.write_text("print('hello')\n", encoding="utf-8")
+
+    exit_code = main(["optimize", "patch", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "No patchable optimization suggestion" in output.out

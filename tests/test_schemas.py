@@ -187,3 +187,19 @@ def test_optimize_evaluate_schema_accepts_valid_payload() -> None:
     }
 
     validate_named_schema("optimize_evaluate_report", payload)
+
+
+def test_optimize_patch_schema_accepts_valid_payload() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "command": "optimize patch",
+        "script": "/tmp/demo.py",
+        "candidate_path": "/tmp/demo.candidate.py",
+        "rule_id": "PY001",
+        "strategy_title": "Prefer direct iteration over range(len())",
+        "applied": True,
+        "changes_count": 1,
+        "diff": "--- a\n+++ b\n",
+    }
+
+    validate_named_schema("optimize_patch_report", payload)

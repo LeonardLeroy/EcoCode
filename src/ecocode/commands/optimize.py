@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from ecocode.core.config import load_project_config
-from ecocode.core.optimizer import suggest_optimizations
+from ecocode.core.optimizer import generate_optimization_patch, suggest_optimizations
 from ecocode.core.profiler import (
     DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
     profile_script_repeated,
@@ -42,6 +42,33 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Output machine-readable JSON",
     )
     suggest_parser.set_defaults(handler=handle_suggest)
+
+    patch_parser = optimize_subparsers.add_parser(
+        "patch",
+        help="Generate a candidate patch from a selected optimization strategy",
+    )
+    patch_parser.add_argument("script", help="Path to the source file")
+    patch_parser.add_argument(
+        "--rule-id",
+        default=None,
+        help="Apply a specific rule ID (default: first patchable suggestion)",
+    )
+    patch_parser.add_argument(
+        "--output",
+        default=None,
+        help="Output path for candidate file (default: <script>.candidate<suffix>)",
+    )
+    patch_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite output file if it already exists",
+    )
+    patch_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output machine-readable JSON",
+    )
+    patch_parser.set_defaults(handler=handle_patch)
 
     evaluate_parser = optimize_subparsers.add_parser(
         "evaluate",
@@ -152,6 +179,64 @@ def handle_suggest(args: argparse.Namespace) -> int:
         print(f"   Impact: {item.impact} | Confidence: {item.confidence} | Language: {item.language}")
         print(f"   Why: {item.rationale}")
 
+    return 0
+
+
+def _default_candidate_output_path(script_path: Path) -> Path:
+    candidate_name = f"{script_path.stem}.candidate{script_path.suffix}"
+    return script_path.with_name(candidate_name)
+
+
+def handle_patch(args: argparse.Namespace) -> int:
+    script_path = Path(args.script).resolve()
+    output_path = (
+        Path(args.output).resolve()
+        if args.output is not None
+        else _default_candidate_output_path(script_path)
+    )
+
+    try:
+        result = generate_optimization_patch(
+            script_path=script_path,
+            output_path=output_path,
+            rule_id=args.rule_id,
+            overwrite=args.overwrite,
+        )
+    except (FileNotFoundError, ValueError, UnicodeError) as exc:
+        print(str(exc))
+        return 1
+
+    payload = {
+        "schemaVersion": CURRENT_SCHEMA_VERSION,
+        "command": "optimize patch",
+        "script": result.script,
+        "candidate_path": result.candidate_path,
+        "rule_id": result.rule_id,
+        "strategy_title": result.strategy_title,
+        "applied": result.applied,
+        "changes_count": result.changes_count,
+        "diff": result.diff,
+    }
+
+    try:
+        validate_named_schema("optimize_patch_report", payload)
+    except SchemaValidationError as exc:
+        print(f"Output schema validation failed: {exc}")
+        return 1
+
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    print("EcoCode optimize patch")
+    print(f"Script:                 {result.script}")
+    print(f"Candidate file:         {result.candidate_path}")
+    print(f"Rule:                   {result.rule_id}")
+    print(f"Strategy:               {result.strategy_title}")
+    print(f"Applied changes:        {result.changes_count}")
+    if result.diff:
+        print("Diff preview:")
+        print(result.diff)
     return 0
 
 

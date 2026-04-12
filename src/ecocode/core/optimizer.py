@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import difflib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +15,17 @@ class OptimizationSuggestion:
     impact: str
     confidence: float
     language: str
+
+
+@dataclass(slots=True)
+class OptimizationPatchResult:
+    script: str
+    candidate_path: str
+    rule_id: str
+    strategy_title: str
+    applied: bool
+    changes_count: int
+    diff: str
 
 
 def suggest_optimizations(script_path: Path, max_suggestions: int = 10) -> list[OptimizationSuggestion]:
@@ -51,6 +64,173 @@ def suggest_optimizations(script_path: Path, max_suggestions: int = 10) -> list[
             break
 
     return deduped
+
+
+def generate_optimization_patch(
+    script_path: Path,
+    output_path: Path,
+    rule_id: str | None = None,
+    overwrite: bool = False,
+) -> OptimizationPatchResult:
+    if not script_path.exists() or not script_path.is_file():
+        raise FileNotFoundError(f"Script not found: {script_path}")
+    if output_path.exists() and not overwrite:
+        raise ValueError(f"Candidate file already exists: {output_path}")
+
+    source = script_path.read_text(encoding="utf-8", errors="replace")
+    suffix = script_path.suffix.lower()
+    language = _detect_language(suffix)
+    if language != "python":
+        raise ValueError("optimize patch MVP currently supports only Python files")
+
+    suggestions = suggest_optimizations(script_path=script_path, max_suggestions=50)
+    selected = _select_patch_suggestion(suggestions, rule_id=rule_id)
+    if selected is None:
+        requested = rule_id or "(auto)"
+        raise ValueError(f"No patchable optimization suggestion found for rule: {requested}")
+
+    candidate_source, changes_count = _apply_python_patch_strategy(source, selected.rule_id)
+    if changes_count == 0:
+        raise ValueError(f"Rule {selected.rule_id} was detected but no safe patch could be applied")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(candidate_source, encoding="utf-8")
+
+    diff = "\n".join(
+        difflib.unified_diff(
+            source.splitlines(),
+            candidate_source.splitlines(),
+            fromfile=str(script_path),
+            tofile=str(output_path),
+            lineterm="",
+        )
+    )
+
+    return OptimizationPatchResult(
+        script=str(script_path),
+        candidate_path=str(output_path),
+        rule_id=selected.rule_id,
+        strategy_title=selected.title,
+        applied=True,
+        changes_count=changes_count,
+        diff=diff,
+    )
+
+
+def _select_patch_suggestion(
+    suggestions: list[OptimizationSuggestion],
+    rule_id: str | None,
+) -> OptimizationSuggestion | None:
+    patchable_rule_ids = {"PY001"}
+    if rule_id is not None:
+        for item in suggestions:
+            if item.rule_id == rule_id and item.rule_id in patchable_rule_ids:
+                return item
+        return None
+
+    for item in suggestions:
+        if item.rule_id in patchable_rule_ids:
+            return item
+    return None
+
+
+def _apply_python_patch_strategy(source: str, rule_id: str) -> tuple[str, int]:
+    if rule_id != "PY001":
+        return source, 0
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise ValueError(f"Failed to parse Python source for patching: {exc}") from exc
+
+    lines = source.splitlines()
+    replacement_lines: dict[int, str] = {}
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.For):
+            continue
+        if not isinstance(node.target, ast.Name):
+            continue
+        if not isinstance(node.iter, ast.Call):
+            continue
+
+        loop_var = node.target.id
+        collection_name = _extract_range_len_collection_name(node.iter)
+        if collection_name is None:
+            continue
+
+        if _name_used_in_body(loop_var, node.body):
+            continue
+
+        line_number = node.lineno
+        if line_number < 1 or line_number > len(lines):
+            continue
+
+        original_line = lines[line_number - 1]
+        replacement_line = _rewrite_for_header_line(
+            original_line=original_line,
+            loop_var=loop_var,
+            collection_name=collection_name,
+        )
+        if replacement_line is None:
+            continue
+
+        replacement_lines[line_number - 1] = replacement_line
+
+    if not replacement_lines:
+        return source, 0
+
+    updated_lines = list(lines)
+    for index, value in replacement_lines.items():
+        updated_lines[index] = value
+
+    updated_source = "\n".join(updated_lines)
+    if source.endswith("\n"):
+        updated_source += "\n"
+
+    return updated_source, len(replacement_lines)
+
+
+def _extract_range_len_collection_name(iter_node: ast.Call) -> str | None:
+    if not isinstance(iter_node.func, ast.Name) or iter_node.func.id != "range":
+        return None
+    if len(iter_node.args) != 1:
+        return None
+
+    first_arg = iter_node.args[0]
+    if not isinstance(first_arg, ast.Call):
+        return None
+    if not isinstance(first_arg.func, ast.Name) or first_arg.func.id != "len":
+        return None
+    if len(first_arg.args) != 1:
+        return None
+
+    collection = first_arg.args[0]
+    if not isinstance(collection, ast.Name):
+        return None
+    return collection.id
+
+
+def _name_used_in_body(name: str, body: list[ast.stmt]) -> bool:
+    for statement in body:
+        for node in ast.walk(statement):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id == name:
+                return True
+    return False
+
+
+def _rewrite_for_header_line(
+    original_line: str,
+    loop_var: str,
+    collection_name: str,
+) -> str | None:
+    pattern = re.compile(
+        rf"^(?P<indent>\s*)for\s+{re.escape(loop_var)}\s+in\s+range\(\s*len\(\s*{re.escape(collection_name)}\s*\)\s*\)\s*:\s*$"
+    )
+    matched = pattern.match(original_line)
+    if matched is None:
+        return None
+    return f"{matched.group('indent')}for _ in {collection_name}:"
 
 
 def _detect_language(suffix: str) -> str:

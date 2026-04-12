@@ -131,6 +131,19 @@ OPTIMIZE_EVALUATE_KEYS = {
 }
 
 
+OPTIMIZE_PATCH_KEYS = {
+    "schemaVersion",
+    "command",
+    "script",
+    "candidate_path",
+    "rule_id",
+    "strategy_title",
+    "applied",
+    "changes_count",
+    "diff",
+}
+
+
 def test_profile_json_contract(tmp_path: Path, capsys) -> None:
     script = tmp_path / "demo.py"
     script.write_text("print('hello')\n", encoding="utf-8")
@@ -301,3 +314,18 @@ def test_optimize_evaluate_json_contract(tmp_path: Path, capsys) -> None:
     payload = json.loads(output.out)
     assert set(payload.keys()) == OPTIMIZE_EVALUATE_KEYS
     assert set(payload["candidate"].keys()) == MEASUREMENT_KEYS
+
+
+def test_optimize_patch_json_contract(tmp_path: Path, capsys) -> None:
+    script = tmp_path / "script.py"
+    script.write_text(
+        "items = [1, 2, 3]\nfor i in range(len(items)):\n    print('x')\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["optimize", "patch", str(script), "--json"])
+    output = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(output.out)
+    assert set(payload.keys()) == OPTIMIZE_PATCH_KEYS

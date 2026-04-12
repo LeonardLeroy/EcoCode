@@ -481,6 +481,34 @@ OPTIMIZE_EVALUATE_REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
+OPTIMIZE_PATCH_REPORT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "schemaVersion",
+        "command",
+        "script",
+        "candidate_path",
+        "rule_id",
+        "strategy_title",
+        "applied",
+        "changes_count",
+        "diff",
+    ],
+    "properties": {
+        "schemaVersion": {"type": "integer", "minimum": 1},
+        "command": {"type": "string", "enum": ["optimize patch"]},
+        "script": {"type": "string"},
+        "candidate_path": {"type": "string"},
+        "rule_id": {"type": "string"},
+        "strategy_title": {"type": "string"},
+        "applied": {"type": "boolean"},
+        "changes_count": {"type": "integer", "minimum": 0},
+        "diff": {"type": "string"},
+    },
+    "additionalProperties": False,
+}
+
+
 SCHEMAS: dict[str, dict[str, Any]] = {
     "profile_report": PROFILE_REPORT_SCHEMA,
     "baseline_file": BASELINE_FILE_SCHEMA,
@@ -490,6 +518,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "benchmark_report": BENCHMARK_REPORT_SCHEMA,
     "optimize_suggest_report": OPTIMIZE_SUGGEST_REPORT_SCHEMA,
     "optimize_evaluate_report": OPTIMIZE_EVALUATE_REPORT_SCHEMA,
+    "optimize_patch_report": OPTIMIZE_PATCH_REPORT_SCHEMA,
 }
 
 
