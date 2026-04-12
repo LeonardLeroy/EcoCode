@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from ecocode.core.repository_profiler import (
+    DEFAULT_SCRIPT_EXTENSIONS,
+    profile_repository,
+)
+
+
+def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = subparsers.add_parser(
+        "profile-repo",
+        help="Profile supported script files across a repository",
+    )
+    parser.add_argument(
+        "--root",
+        default=".",
+        help="Repository root directory (default: current directory)",
+    )
+    parser.add_argument(
+        "--max-files",
+        type=int,
+        default=50,
+        help="Maximum number of files to profile (default: 50)",
+    )
+    parser.add_argument(
+        "--ext",
+        action="append",
+        default=[],
+        help="Extension to include (repeatable), example: --ext .py --ext .js",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output machine-readable JSON",
+    )
+    parser.set_defaults(handler=handle)
+
+
+def handle(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    if args.max_files <= 0:
+        print("--max-files must be greater than 0")
+        return 1
+
+    extensions = {
+        ext if ext.startswith(".") else f".{ext}"
+        for ext in args.ext
+    }
+    if not extensions:
+        extensions = set(DEFAULT_SCRIPT_EXTENSIONS)
+
+    try:
+        result = profile_repository(root=root, extensions=extensions, max_files=args.max_files)
+    except FileNotFoundError as exc:
+        print(str(exc))
+        return 1
+
+    if args.json:
+        payload = {
+            "root": result.root,
+            "total_files": result.total_files,
+            "total_cpu_seconds": result.total_cpu_seconds,
+            "total_memory_mb": result.total_memory_mb,
+            "total_energy_wh": result.total_energy_wh,
+            "average_sustainability_score": result.average_sustainability_score,
+            "extensions": sorted(extensions),
+            "files": [
+                {
+                    "script": entry.script,
+                    "cpu_seconds": entry.cpu_seconds,
+                    "memory_mb": entry.memory_mb,
+                    "estimated_energy_wh": entry.estimated_energy_wh,
+                    "sustainability_score": entry.sustainability_score,
+                }
+                for entry in result.results
+            ],
+        }
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    print("EcoCode repository profile")
+    print(f"Root:                     {result.root}")
+    print(f"Files profiled:           {result.total_files}")
+    print(f"Total CPU time (s):       {result.total_cpu_seconds}")
+    print(f"Total memory peak (MB):   {result.total_memory_mb}")
+    print(f"Total estimated Wh:       {result.total_energy_wh}")
+    print(f"Average sustainability:   {result.average_sustainability_score}/100")
+
+    if result.total_files == 0:
+        print("No matching files found. Use --ext to adjust file discovery.")
+
+    return 0
