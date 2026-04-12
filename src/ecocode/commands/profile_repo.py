@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
+from ecocode.core.sarif import build_repo_profile_sarif, write_sarif_output
 from ecocode.core.repository_profiler import (
     DEFAULT_SCRIPT_EXTENSIONS,
     profile_repository,
@@ -38,6 +39,11 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         "--json",
         action="store_true",
         help="Output machine-readable JSON",
+    )
+    parser.add_argument(
+        "--sarif-output",
+        default=None,
+        help="Write SARIF report to the given file path",
     )
     parser.add_argument(
         "--save-run",
@@ -100,6 +106,14 @@ def handle(args: argparse.Namespace) -> int:
             payload={"command": "profile-repo", "result": payload},
         )
 
+    sarif_written_path: Path | None = None
+    if args.sarif_output:
+        sarif_payload = build_repo_profile_sarif(payload)
+        sarif_output_path = Path(args.sarif_output)
+        if not sarif_output_path.is_absolute():
+            sarif_output_path = (Path.cwd() / sarif_output_path).resolve()
+        sarif_written_path = write_sarif_output(sarif_payload, sarif_output_path)
+
     if args.json:
         print(json.dumps(payload, indent=2))
         return 0
@@ -111,6 +125,8 @@ def handle(args: argparse.Namespace) -> int:
     print(f"Total memory peak (MB):   {result.total_memory_mb}")
     print(f"Total estimated Wh:       {result.total_energy_wh}")
     print(f"Average sustainability:   {result.average_sustainability_score}/100")
+    if sarif_written_path is not None:
+        print(f"SARIF written:            {sarif_written_path}")
 
     if result.total_files == 0:
         print("No matching files found. Use --ext to adjust file discovery.")
