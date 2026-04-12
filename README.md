@@ -30,7 +30,8 @@ Phase 1 has started with a first functional Python CLI prototype.
 - Config support via `ecocode.toml`
 - Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
 - Multi-language audit scope includes Python, C, C++, C#, Rust, JavaScript/TypeScript, HTML/CSS, and Assembly in repository scans.
-- Runtime collection preview: `--collector runtime` (Linux/macOS/Windows)
+- Repository profiling is extension-based, so it can audit mixed-language repos even when runtime execution support is narrower than static scanning.
+- Runtime collection preview: `--collector runtime` (Linux/Windows; macOS deferred for now)
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
 - Linux runtime collector also samples cgroup memory usage (when available) for container-aware measurements.
@@ -117,11 +118,23 @@ Examples:
 - Supports JSON output for CI/report pipelines.
 - Supports candidate evaluation against baseline gates (`optimize evaluate`).
 
+Workflow:
+1. Create a baseline with `ecocode baseline create`.
+2. Inspect hotspots with `ecocode optimize suggest`.
+3. Apply a candidate change manually or with a later patch command.
+4. Verify improvement with `ecocode optimize evaluate`.
+5. Keep only candidates that improve energy/performance without failing regression gates.
+
 Examples:
 - `ecocode optimize suggest path/to/script.py`
 - `ecocode optimize suggest path/to/script.py --json`
 - `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
 - `ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json`
+
+Notes:
+- `optimize suggest` is deterministic today, so the same file yields the same rule hits.
+- `optimize evaluate` compares candidate energy against the baseline median and applies stability gates.
+- The deterministic optimizer is the bridge to local LLMs later, because the validation path already exists.
 
 ### Audit history tracking
 
