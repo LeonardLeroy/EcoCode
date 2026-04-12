@@ -36,6 +36,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Extension to include (repeatable), example: --ext .py --ext .js",
     )
     parser.add_argument(
+        "--collector",
+        choices=["placeholder", "runtime"],
+        default="placeholder",
+        help="Collector backend to use (default: placeholder)",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output machine-readable JSON",
@@ -73,8 +79,13 @@ def handle(args: argparse.Namespace) -> int:
         extensions = set(DEFAULT_SCRIPT_EXTENSIONS)
 
     try:
-        result = profile_repository(root=root, extensions=extensions, max_files=max_files)
-    except FileNotFoundError as exc:
+        result = profile_repository(
+            root=root,
+            extensions=extensions,
+            max_files=max_files,
+            collector=args.collector,
+        )
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 

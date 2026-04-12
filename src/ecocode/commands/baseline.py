@@ -22,6 +22,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     )
     create_parser.add_argument("script", help="Path to the script to profile")
     create_parser.add_argument(
+        "--collector",
+        choices=["placeholder", "runtime"],
+        default="placeholder",
+        help="Collector backend to use (default: placeholder)",
+    )
+    create_parser.add_argument(
         "-o",
         "--output",
         required=True,
@@ -39,6 +45,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Compare current script profile against a baseline",
     )
     compare_parser.add_argument("script", help="Path to the script to profile")
+    compare_parser.add_argument(
+        "--collector",
+        choices=["placeholder", "runtime"],
+        default="placeholder",
+        help="Collector backend to use (default: placeholder)",
+    )
     compare_parser.add_argument(
         "--baseline",
         required=True,
@@ -79,8 +91,8 @@ def handle_create(args: argparse.Namespace) -> int:
     config = load_project_config(Path.cwd())
 
     try:
-        result = profile_script(script_path)
-    except FileNotFoundError as exc:
+        result = profile_script(script_path, collector=args.collector)
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 
@@ -113,8 +125,8 @@ def handle_compare(args: argparse.Namespace) -> int:
     config = load_project_config(Path.cwd())
 
     try:
-        current = profile_script(script_path)
-    except FileNotFoundError as exc:
+        current = profile_script(script_path, collector=args.collector)
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 

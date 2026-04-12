@@ -16,6 +16,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     )
     parser.add_argument("script", help="Path to the script to profile")
     parser.add_argument(
+        "--collector",
+        choices=["placeholder", "runtime"],
+        default="placeholder",
+        help="Collector backend to use (default: placeholder)",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output machine-readable JSON",
@@ -33,8 +39,8 @@ def handle(args: argparse.Namespace) -> int:
     config = load_project_config(Path.cwd())
 
     try:
-        result = profile_script(script_path)
-    except FileNotFoundError as exc:
+        result = profile_script(script_path, collector=args.collector)
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
         return 1
 

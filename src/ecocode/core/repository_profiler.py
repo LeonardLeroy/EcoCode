@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ecocode.core.profiler import ProfileResult, profile_script
+from ecocode.core.profiler import CollectorType, ProfileResult, profile_script
 
 DEFAULT_SCRIPT_EXTENSIONS = {
     ".py",
@@ -71,6 +71,7 @@ def profile_repository(
     root: Path,
     extensions: set[str] | None = None,
     max_files: int = 50,
+    collector: CollectorType = "placeholder",
 ) -> RepoProfileResult:
     if not root.exists() or not root.is_dir():
         raise FileNotFoundError(f"Repository root not found: {root}")
@@ -78,7 +79,7 @@ def profile_repository(
     profile_extensions = extensions or DEFAULT_SCRIPT_EXTENSIONS
     targets = discover_profile_targets(root, profile_extensions, max_files)
 
-    results = [profile_script(target) for target in targets]
+    results = [profile_script(target, collector=collector) for target in targets]
 
     total_files = len(results)
     total_cpu_seconds = round(sum(r.cpu_seconds for r in results), 4)
