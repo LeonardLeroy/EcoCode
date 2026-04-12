@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from ecocode.core.config import load_project_config
+from ecocode.core.history import should_save_run, write_audit_run
 from ecocode.core.profiler import ProfileResult, profile_script
 
 
@@ -25,6 +27,11 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         required=True,
         help="Output path for the baseline JSON file",
     )
+    create_parser.add_argument(
+        "--save-run",
+        action="store_true",
+        help="Save this audit result to the local history directory",
+    )
     create_parser.set_defaults(handler=handle_create)
 
     compare_parser = baseline_subparsers.add_parser(
@@ -40,13 +47,18 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     compare_parser.add_argument(
         "--energy-threshold-pct",
         type=float,
-        default=5.0,
-        help="Allowed energy increase percentage before failing (default: 5.0)",
+        default=None,
+        help="Allowed energy increase percentage before failing",
     )
     compare_parser.add_argument(
         "--json",
         action="store_true",
         help="Output machine-readable JSON",
+    )
+    compare_parser.add_argument(
+        "--save-run",
+        action="store_true",
+        help="Save this audit result to the local history directory",
     )
     compare_parser.set_defaults(handler=handle_compare)
 
@@ -64,6 +76,7 @@ def _result_to_dict(result: ProfileResult) -> dict[str, float | int | str]:
 def handle_create(args: argparse.Namespace) -> int:
     script_path = Path(args.script).resolve()
     output_path = Path(args.output).resolve()
+    config = load_project_config(Path.cwd())
 
     try:
         result = profile_script(script_path)
@@ -78,6 +91,18 @@ def handle_create(args: argparse.Namespace) -> int:
     }
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
+        write_audit_run(
+            project_root=config.project_root,
+            history_dir=config.history_dir,
+            command_name="baseline-create",
+            payload={
+                "command": "baseline create",
+                "output": str(output_path),
+                "result": payload,
+            },
+        )
+
     print(f"Baseline created: {output_path}")
     return 0
 
@@ -85,6 +110,7 @@ def handle_create(args: argparse.Namespace) -> int:
 def handle_compare(args: argparse.Namespace) -> int:
     script_path = Path(args.script).resolve()
     baseline_path = Path(args.baseline).resolve()
+    config = load_project_config(Path.cwd())
 
     try:
         current = profile_script(script_path)
@@ -107,21 +133,34 @@ def handle_compare(args: argparse.Namespace) -> int:
     else:
         increase_pct = ((current_energy - baseline_energy) / baseline_energy) * 100.0
 
-    regression = increase_pct > args.energy_threshold_pct
+    threshold_pct = args.energy_threshold_pct
+    if threshold_pct is None:
+        threshold_pct = config.baseline_energy_threshold_pct
+
+    regression = increase_pct > threshold_pct
     exit_code = 2 if regression else 0
 
+    response_payload = {
+        "baseline_path": str(baseline_path),
+        "threshold_pct": threshold_pct,
+        "baseline_energy_wh": baseline_energy,
+        "current_energy_wh": current_energy,
+        "increase_pct": round(increase_pct, 4),
+        "regression": regression,
+        "status": "failed" if regression else "passed",
+        "current": _result_to_dict(current),
+    }
+
+    if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
+        write_audit_run(
+            project_root=config.project_root,
+            history_dir=config.history_dir,
+            command_name="baseline-compare",
+            payload={"command": "baseline compare", "result": response_payload},
+        )
+
     if args.json:
-        payload = {
-            "baseline_path": str(baseline_path),
-            "threshold_pct": args.energy_threshold_pct,
-            "baseline_energy_wh": baseline_energy,
-            "current_energy_wh": current_energy,
-            "increase_pct": round(increase_pct, 4),
-            "regression": regression,
-            "status": "failed" if regression else "passed",
-            "current": _result_to_dict(current),
-        }
-        print(json.dumps(payload, indent=2))
+        print(json.dumps(response_payload, indent=2))
         return exit_code
 
     print("EcoCode baseline comparison")
@@ -129,7 +168,7 @@ def handle_compare(args: argparse.Namespace) -> int:
     print(f"Baseline energy Wh:     {baseline_energy}")
     print(f"Current energy Wh:      {current_energy}")
     print(f"Energy increase (%):    {round(increase_pct, 4)}")
-    print(f"Threshold (%):          {args.energy_threshold_pct}")
+    print(f"Threshold (%):          {threshold_pct}")
 
     if regression:
         print("Status:                 FAILED (energy regression detected)")

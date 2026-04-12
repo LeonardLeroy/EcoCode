@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from ecocode.core.config import load_project_config
+from ecocode.core.history import should_save_run, write_audit_run
 from ecocode.core.repository_profiler import (
     DEFAULT_SCRIPT_EXTENSIONS,
     profile_repository,
@@ -23,8 +25,8 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     parser.add_argument(
         "--max-files",
         type=int,
-        default=50,
-        help="Maximum number of files to profile (default: 50)",
+        default=None,
+        help="Maximum number of files to profile",
     )
     parser.add_argument(
         "--ext",
@@ -37,12 +39,23 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         action="store_true",
         help="Output machine-readable JSON",
     )
+    parser.add_argument(
+        "--save-run",
+        action="store_true",
+        help="Save this audit result to the local history directory",
+    )
     parser.set_defaults(handler=handle)
 
 
 def handle(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
-    if args.max_files <= 0:
+    config = load_project_config(Path.cwd())
+
+    max_files = args.max_files
+    if max_files is None:
+        max_files = config.profile_repo_max_files
+
+    if max_files <= 0:
         print("--max-files must be greater than 0")
         return 1
 
@@ -54,31 +67,40 @@ def handle(args: argparse.Namespace) -> int:
         extensions = set(DEFAULT_SCRIPT_EXTENSIONS)
 
     try:
-        result = profile_repository(root=root, extensions=extensions, max_files=args.max_files)
+        result = profile_repository(root=root, extensions=extensions, max_files=max_files)
     except FileNotFoundError as exc:
         print(str(exc))
         return 1
 
+    payload = {
+        "root": result.root,
+        "total_files": result.total_files,
+        "total_cpu_seconds": result.total_cpu_seconds,
+        "total_memory_mb": result.total_memory_mb,
+        "total_energy_wh": result.total_energy_wh,
+        "average_sustainability_score": result.average_sustainability_score,
+        "extensions": sorted(extensions),
+        "files": [
+            {
+                "script": entry.script,
+                "cpu_seconds": entry.cpu_seconds,
+                "memory_mb": entry.memory_mb,
+                "estimated_energy_wh": entry.estimated_energy_wh,
+                "sustainability_score": entry.sustainability_score,
+            }
+            for entry in result.results
+        ],
+    }
+
+    if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
+        write_audit_run(
+            project_root=config.project_root,
+            history_dir=config.history_dir,
+            command_name="profile-repo",
+            payload={"command": "profile-repo", "result": payload},
+        )
+
     if args.json:
-        payload = {
-            "root": result.root,
-            "total_files": result.total_files,
-            "total_cpu_seconds": result.total_cpu_seconds,
-            "total_memory_mb": result.total_memory_mb,
-            "total_energy_wh": result.total_energy_wh,
-            "average_sustainability_score": result.average_sustainability_score,
-            "extensions": sorted(extensions),
-            "files": [
-                {
-                    "script": entry.script,
-                    "cpu_seconds": entry.cpu_seconds,
-                    "memory_mb": entry.memory_mb,
-                    "estimated_energy_wh": entry.estimated_energy_wh,
-                    "sustainability_score": entry.sustainability_score,
-                }
-                for entry in result.results
-            ],
-        }
         print(json.dumps(payload, indent=2))
         return 0
 
