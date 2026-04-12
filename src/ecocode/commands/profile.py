@@ -7,6 +7,7 @@ from pathlib import Path
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
 from ecocode.core.profiler import profile_script_repeated, summarize_profile_runs
+from ecocode.core.schemas import SchemaValidationError, validate_named_schema
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -123,6 +124,12 @@ def handle(args: argparse.Namespace) -> int:
             }
             for item in results
         ]
+
+    try:
+        validate_named_schema("profile_report", payload)
+    except SchemaValidationError as exc:
+        print(f"Output schema validation failed: {exc}")
+        return 1
 
     saved_path: Path | None = None
     if config.history_enabled and should_save_run(args.save_run, config.history_auto_save):
