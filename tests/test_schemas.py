@@ -149,3 +149,41 @@ def test_optimize_suggest_schema_accepts_valid_payload() -> None:
     }
 
     validate_named_schema("optimize_suggest_report", payload)
+
+
+def test_optimize_evaluate_schema_accepts_valid_payload() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "command": "optimize evaluate",
+        "baseline_path": "/tmp/baseline.json",
+        "candidate_path": "/tmp/candidate.py",
+        "collector": "placeholder",
+        "runs": 3,
+        "threshold_pct": 5.0,
+        "baseline_energy_wh": 0.2,
+        "candidate_energy_wh": 0.19,
+        "increase_pct": -5.0,
+        "regression": False,
+        "status": "passed",
+        "candidate": {
+            "script": "/tmp/candidate.py",
+            "cpu_seconds": 1.2,
+            "memory_mb": 40.0,
+            "estimated_energy_wh": 0.19,
+            "sustainability_score": 90,
+        },
+        "candidate_statistics": {
+            "estimated_energy_wh_mean": 0.2,
+            "estimated_energy_wh_median": 0.19,
+            "estimated_energy_wh_stddev": 0.01,
+            "estimated_energy_wh_cv_pct": 5.0,
+            "cpu_seconds_median": 1.2,
+            "memory_mb_median": 40.0,
+        },
+        "stability": {
+            "max_energy_cv_pct": 35.0,
+            "unstable": False,
+        },
+    }
+
+    validate_named_schema("optimize_evaluate_report", payload)

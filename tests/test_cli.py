@@ -246,3 +246,69 @@ def test_optimize_suggest_missing_file(capsys) -> None:
 
     assert exit_code == 1
     assert "script not found" in output.out.lower()
+
+
+def test_optimize_evaluate_json_success(tmp_path: Path, capsys) -> None:
+    baseline_script = tmp_path / "base.py"
+    baseline_script.write_text("print('base')\n", encoding="utf-8")
+    baseline_file = tmp_path / "baseline.json"
+
+    create_exit = main(["baseline", "create", str(baseline_script), "-o", str(baseline_file)])
+    assert create_exit == 0
+    _ = capsys.readouterr()
+
+    candidate = tmp_path / "candidate.py"
+    candidate.write_text("print('candidate')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "optimize",
+            "evaluate",
+            "--baseline",
+            str(baseline_file),
+            "--candidate",
+            str(candidate),
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code in {0, 2}
+    payload = json.loads(output.out)
+    assert payload["command"] == "optimize evaluate"
+
+
+def test_optimize_evaluate_regression_exit_code(tmp_path: Path, capsys) -> None:
+    candidate = tmp_path / "candidate.py"
+    candidate.write_text("print('candidate')\n", encoding="utf-8")
+
+    baseline_file = tmp_path / "baseline.json"
+    baseline_file.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "version": 1,
+                "baseline": {"estimated_energy_wh": 0.0001},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "optimize",
+            "evaluate",
+            "--baseline",
+            str(baseline_file),
+            "--candidate",
+            str(candidate),
+            "--energy-threshold-pct",
+            "1",
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code == 2
+    payload = json.loads(output.out)
+    assert payload["regression"] is True

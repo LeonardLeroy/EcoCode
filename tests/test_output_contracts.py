@@ -112,6 +112,25 @@ OPTIMIZE_SUGGEST_ITEM_KEYS = {
 }
 
 
+OPTIMIZE_EVALUATE_KEYS = {
+    "schemaVersion",
+    "command",
+    "baseline_path",
+    "candidate_path",
+    "collector",
+    "runs",
+    "threshold_pct",
+    "baseline_energy_wh",
+    "candidate_energy_wh",
+    "increase_pct",
+    "regression",
+    "status",
+    "candidate",
+    "candidate_statistics",
+    "stability",
+}
+
+
 def test_profile_json_contract(tmp_path: Path, capsys) -> None:
     script = tmp_path / "demo.py"
     script.write_text("print('hello')\n", encoding="utf-8")
@@ -251,3 +270,34 @@ def test_optimize_suggest_json_contract(tmp_path: Path, capsys) -> None:
     assert set(payload.keys()) == OPTIMIZE_SUGGEST_KEYS
     if payload["suggestions"]:
         assert set(payload["suggestions"][0].keys()) == OPTIMIZE_SUGGEST_ITEM_KEYS
+
+
+def test_optimize_evaluate_json_contract(tmp_path: Path, capsys) -> None:
+    baseline_script = tmp_path / "base.py"
+    baseline_script.write_text("print('base')\n", encoding="utf-8")
+    baseline_file = tmp_path / "baseline.json"
+
+    create_exit = main(["baseline", "create", str(baseline_script), "-o", str(baseline_file)])
+    assert create_exit == 0
+    _ = capsys.readouterr()
+
+    candidate = tmp_path / "candidate.py"
+    candidate.write_text("print('candidate')\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "optimize",
+            "evaluate",
+            "--baseline",
+            str(baseline_file),
+            "--candidate",
+            str(candidate),
+            "--json",
+        ]
+    )
+    output = capsys.readouterr()
+
+    assert exit_code in {0, 2}
+    payload = json.loads(output.out)
+    assert set(payload.keys()) == OPTIMIZE_EVALUATE_KEYS
+    assert set(payload["candidate"].keys()) == MEASUREMENT_KEYS
