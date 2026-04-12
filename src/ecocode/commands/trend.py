@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -34,6 +35,11 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         action="store_true",
         help="Output machine-readable JSON",
     )
+    parser.add_argument(
+        "--csv-output",
+        default=None,
+        help="Write trend points to a CSV file",
+    )
     parser.set_defaults(handler=handle)
 
 
@@ -54,6 +60,28 @@ def handle(args: argparse.Namespace) -> int:
         points = points[-args.limit :]
 
     summary = summarize_trend(points)
+
+    csv_written_path: Path | None = None
+    if args.csv_output:
+        csv_path = Path(args.csv_output)
+        if not csv_path.is_absolute():
+            csv_path = (Path.cwd() / csv_path).resolve()
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
+            writer = csv.DictWriter(
+                csv_file,
+                fieldnames=["timestamp", "command", "energy_wh"],
+            )
+            writer.writeheader()
+            for point in points:
+                writer.writerow(
+                    {
+                        "timestamp": point.timestamp,
+                        "command": point.command,
+                        "energy_wh": point.energy_wh,
+                    }
+                )
+        csv_written_path = csv_path
 
     if args.json:
         payload = {
@@ -77,6 +105,8 @@ def handle(args: argparse.Namespace) -> int:
 
     if summary["count"] == 0:
         print("No audit history points found.")
+        if csv_written_path is not None:
+            print(f"CSV written:            {csv_written_path}")
         return 0
 
     print(f"First energy (Wh):      {summary['first_energy_wh']}")
@@ -85,4 +115,6 @@ def handle(args: argparse.Namespace) -> int:
     print(f"Max energy (Wh):        {summary['max_energy_wh']}")
     print(f"Delta (Wh):             {summary['delta_wh']}")
     print(f"Delta (%):              {summary['delta_pct']}")
+    if csv_written_path is not None:
+        print(f"CSV written:            {csv_written_path}")
     return 0
