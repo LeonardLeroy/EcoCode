@@ -95,6 +95,7 @@ def run_benchmark_suite(
     max_files: int = 50,
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
+    sampling_interval_seconds: float = 0.02,
 ) -> BenchmarkSuiteResult:
     defaults = NOISE_PROFILE_DEFAULTS[noise_profile]
     resolved_runs = runs if runs is not None else defaults.runs
@@ -138,6 +139,7 @@ def run_benchmark_suite(
             runs=resolved_runs,
             cpu_energy_factor=cpu_energy_factor,
             memory_energy_factor=memory_energy_factor,
+            sampling_interval_seconds=sampling_interval_seconds,
         )
         stats = summarize_profile_runs(run_results)
 

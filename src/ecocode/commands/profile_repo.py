@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
+from ecocode.core.profiler import DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS
 from ecocode.core.sarif import build_repo_profile_sarif, write_sarif_output
 from ecocode.core.repository_profiler import (
     DEFAULT_SCRIPT_EXTENSIONS,
@@ -58,6 +59,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         choices=["placeholder", "runtime"],
         default="placeholder",
         help="Collector backend to use (default: placeholder)",
+    )
+    parser.add_argument(
+        "--sampling-interval",
+        type=float,
+        default=DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
+        help="Sampling interval in seconds for runtime collectors",
     )
     parser.add_argument(
         "--json",
@@ -125,6 +132,7 @@ def handle(args: argparse.Namespace) -> int:
                 collector=args.collector,
                 cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
                 memory_energy_factor=config.calibration_memory_wh_per_mb,
+                sampling_interval_seconds=args.sampling_interval,
                 include_globs=args.include_glob,
                 exclude_globs=args.exclude_glob,
             )

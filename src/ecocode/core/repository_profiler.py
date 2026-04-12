@@ -4,7 +4,12 @@ import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
 
-from ecocode.core.profiler import CollectorType, ProfileResult, profile_script
+from ecocode.core.profiler import (
+    DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
+    CollectorType,
+    ProfileResult,
+    profile_script,
+)
 
 DEFAULT_SCRIPT_EXTENSIONS = {
     ".py",
@@ -101,6 +106,7 @@ def profile_repository(
     collector: CollectorType = "placeholder",
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
 ) -> RepoProfileResult:
@@ -122,6 +128,7 @@ def profile_repository(
             collector=collector,
             cpu_energy_factor=cpu_energy_factor,
             memory_energy_factor=memory_energy_factor,
+            sampling_interval_seconds=sampling_interval_seconds,
         )
         for target in targets
     ]

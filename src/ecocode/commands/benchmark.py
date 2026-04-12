@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ecocode.core.benchmark import run_benchmark_suite
 from ecocode.core.config import load_project_config
+from ecocode.core.profiler import DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS
 from ecocode.core.schemas import (
     CURRENT_SCHEMA_VERSION,
     SchemaValidationError,
@@ -34,6 +35,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         choices=["placeholder", "runtime"],
         default="placeholder",
         help="Collector backend to use (default: placeholder)",
+    )
+    parser.add_argument(
+        "--sampling-interval",
+        type=float,
+        default=DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
+        help="Sampling interval in seconds for runtime collectors",
     )
     parser.add_argument(
         "--runs",
@@ -105,6 +112,7 @@ def handle(args: argparse.Namespace) -> int:
             max_files=args.max_files,
             cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
             memory_energy_factor=config.calibration_memory_wh_per_mb,
+            sampling_interval_seconds=args.sampling_interval,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))

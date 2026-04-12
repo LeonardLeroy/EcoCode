@@ -7,6 +7,7 @@ from pathlib import Path
 from ecocode.core.config import load_project_config
 from ecocode.core.history import should_save_run, write_audit_run
 from ecocode.core.profiler import (
+    DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
     ProfileResult,
     profile_script_repeated,
     summarize_profile_runs,
@@ -53,6 +54,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         default=1,
         help="Repeat profiling multiple times and store summary",
     )
+    create_parser.add_argument(
+        "--sampling-interval",
+        type=float,
+        default=DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
+        help="Sampling interval in seconds for runtime collectors",
+    )
     create_parser.set_defaults(handler=handle_create)
 
     compare_parser = baseline_subparsers.add_parser(
@@ -94,6 +101,12 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Repeat current profiling multiple times before compare",
     )
     compare_parser.add_argument(
+        "--sampling-interval",
+        type=float,
+        default=DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
+        help="Sampling interval in seconds for runtime collectors",
+    )
+    compare_parser.add_argument(
         "--max-energy-cv-pct",
         type=float,
         default=None,
@@ -133,6 +146,7 @@ def handle_create(args: argparse.Namespace) -> int:
             runs=args.runs,
             cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
             memory_energy_factor=config.calibration_memory_wh_per_mb,
+            sampling_interval_seconds=args.sampling_interval,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))
@@ -195,6 +209,7 @@ def handle_compare(args: argparse.Namespace) -> int:
             runs=args.runs,
             cpu_energy_factor=config.calibration_cpu_wh_per_cpu_second,
             memory_energy_factor=config.calibration_memory_wh_per_mb,
+            sampling_interval_seconds=args.sampling_interval,
         )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(str(exc))

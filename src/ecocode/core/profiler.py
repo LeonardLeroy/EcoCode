@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover - unavailable on Windows
     resource = None
 
 CollectorType = Literal["placeholder", "runtime"]
+DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS = 0.02
 
 
 @dataclass(slots=True)
@@ -105,6 +106,7 @@ def _profile_runtime(
     script_path: Path,
     cpu_energy_factor: float,
     memory_energy_factor: float,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> ProfileResult:
     system = platform.system().lower()
     command = _build_runtime_command(script_path)
@@ -115,6 +117,7 @@ def _profile_runtime(
             command,
             cpu_energy_factor,
             memory_energy_factor,
+            sampling_interval_seconds,
         )
 
     if system == "windows":
@@ -123,6 +126,7 @@ def _profile_runtime(
             command,
             cpu_energy_factor,
             memory_energy_factor,
+            sampling_interval_seconds,
         )
 
     if system == "darwin":
@@ -131,6 +135,7 @@ def _profile_runtime(
             command,
             cpu_energy_factor,
             memory_energy_factor,
+            sampling_interval_seconds,
         )
 
     raise RuntimeError("Runtime collector currently supports Linux, macOS, and Windows")
@@ -235,11 +240,14 @@ def _profile_runtime_children_usage(
     command: list[str],
     cpu_energy_factor: float,
     memory_energy_factor: float,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> ProfileResult:
     """Fallback runtime collector based on RUSAGE_CHILDREN aggregates."""
 
     if resource is None:
         raise RuntimeError("RUSAGE runtime collector is unavailable on this platform")
+    if sampling_interval_seconds <= 0:
+        raise ValueError("sampling_interval_seconds must be greater than 0")
 
     usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
     started = time.perf_counter()
@@ -340,8 +348,12 @@ def _profile_runtime_windows(
     command: list[str],
     cpu_energy_factor: float,
     memory_energy_factor: float,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> ProfileResult:
     """Windows runtime collector preview (single-process working-set sampling)."""
+
+    if sampling_interval_seconds <= 0:
+        raise ValueError("sampling_interval_seconds must be greater than 0")
 
     try:
         process = subprocess.Popen(
@@ -358,7 +370,7 @@ def _profile_runtime_windows(
 
     while process.poll() is None:
         peak_memory_mb = max(peak_memory_mb, _read_windows_process_memory_mb(process.pid))
-        time.sleep(0.02)
+        time.sleep(sampling_interval_seconds)
 
     stdout_text, stderr_text = process.communicate()
     ended = time.perf_counter()
@@ -442,8 +454,11 @@ def _profile_runtime_linux_process_group(
     command: list[str],
     cpu_energy_factor: float,
     memory_energy_factor: float,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> ProfileResult:
     """Linux runtime collector with process-group sampling (includes subprocess tree)."""
+    if sampling_interval_seconds <= 0:
+        raise ValueError("sampling_interval_seconds must be greater than 0")
     try:
         process = subprocess.Popen(
             command,
@@ -472,7 +487,7 @@ def _profile_runtime_linux_process_group(
             cgroup_peak_memory_mb,
             _read_linux_cgroup_memory_peak_mb(process.pid),
         )
-        time.sleep(0.02)
+        time.sleep(sampling_interval_seconds)
 
     stdout_text, stderr_text = process.communicate()
 
@@ -518,6 +533,7 @@ def profile_script(
     collector: CollectorType = "placeholder",
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> ProfileResult:
     """Profile a script using either placeholder or runtime collection."""
     if not script_path.exists() or not script_path.is_file():
@@ -535,6 +551,7 @@ def profile_script(
             script_path,
             cpu_energy_factor,
             memory_energy_factor,
+            sampling_interval_seconds,
         )
 
     raise ValueError(f"Unsupported collector: {collector}")
@@ -546,6 +563,7 @@ def profile_script_repeated(
     runs: int = 1,
     cpu_energy_factor: float = 0.07,
     memory_energy_factor: float = 0.003,
+    sampling_interval_seconds: float = DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS,
 ) -> list[ProfileResult]:
     if runs <= 0:
         raise ValueError("runs must be greater than 0")
@@ -556,6 +574,7 @@ def profile_script_repeated(
             collector=collector,
             cpu_energy_factor=cpu_energy_factor,
             memory_energy_factor=memory_energy_factor,
+            sampling_interval_seconds=sampling_interval_seconds,
         )
         for _ in range(runs)
     ]
