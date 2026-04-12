@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import platform
 import resource
 import subprocess
@@ -85,6 +86,15 @@ def _profile_runtime(script_path: Path) -> ProfileResult:
 
     command = _build_runtime_command(script_path)
 
+    if system == "linux":
+        return _profile_runtime_linux_process_group(script_path, command)
+
+    return _profile_runtime_children_usage(script_path, command)
+
+
+def _profile_runtime_children_usage(script_path: Path, command: list[str]) -> ProfileResult:
+    """Fallback runtime collector based on RUSAGE_CHILDREN aggregates."""
+
     usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
     started = time.perf_counter()
     completed = subprocess.run(
@@ -112,6 +122,114 @@ def _profile_runtime(script_path: Path) -> ProfileResult:
 
     if cpu_seconds == 0.0:
         cpu_seconds = round(max(0.0001, ended - started), 4)
+
+    estimated_energy_wh = _estimate_energy_wh(cpu_seconds, memory_mb)
+    score = _compute_sustainability_score(cpu_seconds, memory_mb)
+
+    return ProfileResult(
+        script=str(script_path),
+        cpu_seconds=cpu_seconds,
+        memory_mb=memory_mb,
+        estimated_energy_wh=estimated_energy_wh,
+        sustainability_score=score,
+    )
+
+
+def _parse_proc_stat(proc_stat_line: str) -> tuple[int, int, int] | None:
+    """Parse /proc/<pid>/stat and return (pgrp, cpu_ticks, rss_pages)."""
+    right_paren = proc_stat_line.rfind(")")
+    if right_paren == -1:
+        return None
+
+    tail = proc_stat_line[right_paren + 2 :].split()
+    if len(tail) < 22:
+        return None
+
+    # Field mapping relative to tail (field 3 starts at index 0).
+    pgrp = int(tail[2])
+    utime = int(tail[11])
+    stime = int(tail[12])
+    rss_pages = int(tail[21])
+    return pgrp, utime + stime, rss_pages
+
+
+def _read_process_group_totals(process_group_id: int) -> tuple[int, int]:
+    total_ticks = 0
+    total_rss_pages = 0
+
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+
+        stat_path = Path("/proc") / entry / "stat"
+        try:
+            stat_line = stat_path.read_text(encoding="utf-8")
+        except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+
+        parsed = _parse_proc_stat(stat_line)
+        if parsed is None:
+            continue
+
+        pgrp, cpu_ticks, rss_pages = parsed
+        if pgrp != process_group_id:
+            continue
+
+        total_ticks += cpu_ticks
+        total_rss_pages += max(0, rss_pages)
+
+    return total_ticks, total_rss_pages
+
+
+def _profile_runtime_linux_process_group(
+    script_path: Path,
+    command: list[str],
+) -> ProfileResult:
+    """Linux runtime collector with process-group sampling (includes subprocess tree)."""
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise RuntimeError(f"Runtime execution failed: {exc}") from exc
+
+    process_group_id = os.getpgid(process.pid)
+    page_size = os.sysconf("SC_PAGE_SIZE")
+    ticks_per_second = os.sysconf("SC_CLK_TCK")
+
+    start_ticks, start_rss_pages = _read_process_group_totals(process_group_id)
+    last_observed_ticks = start_ticks
+    peak_rss_pages = start_rss_pages
+
+    while process.poll() is None:
+        current_ticks, current_rss_pages = _read_process_group_totals(process_group_id)
+        last_observed_ticks = max(last_observed_ticks, current_ticks)
+        peak_rss_pages = max(peak_rss_pages, current_rss_pages)
+        time.sleep(0.02)
+
+    stdout_text, stderr_text = process.communicate()
+
+    end_ticks, end_rss_pages = _read_process_group_totals(process_group_id)
+    last_observed_ticks = max(last_observed_ticks, end_ticks)
+    peak_rss_pages = max(peak_rss_pages, end_rss_pages)
+
+    if process.returncode != 0:
+        stderr = (stderr_text or "").strip()
+        stdout = (stdout_text or "").strip()
+        details = stderr or stdout or f"exit code {process.returncode}"
+        raise RuntimeError(f"Runtime execution failed: {details}")
+
+    cpu_ticks = max(0, last_observed_ticks - start_ticks)
+    cpu_seconds = round(cpu_ticks / ticks_per_second, 6)
+
+    if cpu_seconds == 0.0:
+        cpu_seconds = 0.0001
+
+    memory_mb = round((peak_rss_pages * page_size) / (1024 * 1024), 6)
 
     estimated_energy_wh = _estimate_energy_wh(cpu_seconds, memory_mb)
     score = _compute_sustainability_score(cpu_seconds, memory_mb)
