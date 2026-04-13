@@ -2,7 +2,7 @@
 
 EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
 
-## What This Project Is For, Concretely
+## What this project is for?
 
 EcoCode helps answer very practical questions:
 - Is this script consuming more than before?
@@ -18,7 +18,7 @@ In practice, the CLI already lets you:
 - generate optimization suggestions,
 - export results for CI tooling (JSON/SARIF).
 
-## Why It Is Useful
+## Why it is useful?
 
 The project makes an often invisible topic visible: the runtime cost of software.
 
@@ -28,7 +28,7 @@ In a team workflow, this makes it easier to:
 - add energy checks to CI the same way we already gate tests and linting,
 - improve performance and reliability without losing sight of sustainability.
 
-## Where We Are Going
+## Where we are going?
 
 The goal is to become a reference platform for sustainable software engineering:
 - increasingly reliable, cross-platform runtime measurement,
@@ -36,7 +36,7 @@ The goal is to become a reference platform for sustainable software engineering:
 - smarter optimization recommendations,
 - simpler integration into team workflows.
 
-## Full Documentation
+## Full documentation
 
 If you want full details (commands, outputs, examples, roadmap, etc.), see the complete project documentation:
 
