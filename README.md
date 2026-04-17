@@ -1,5 +1,9 @@
 # EcoCode
 
+Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+
+[![EcoCode Insights logo](vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+
 EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
 
 ## What this project is for?
