@@ -2,7 +2,7 @@
   "name": "ecocode-vscode",
   "displayName": "EcoCode Insights",
   "description": "Live-ish repository energy/performance insights powered by EcoCode CLI",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "ecocode",
   "icon": "media/Ecocode.png",
   "license": "MIT",
@@ -34,6 +34,8 @@
     "onCommand:ecocode.openDashboard",
     "onCommand:ecocode.scanWorkspace",
     "onCommand:ecocode.scanCurrentFile",
+    "onCommand:ecocode.setupCliInWorkspace",
+    "onCommand:ecocode.showSetupGuide",
     "onCommand:ecocode.startAutoRefresh",
     "onCommand:ecocode.stopAutoRefresh",
     "onCommand:ecocode.configureScanFilters"
@@ -64,6 +66,14 @@
       {
         "command": "ecocode.configureScanFilters",
         "title": "EcoCode: Configure Scan Filters"
+      },
+      {
+        "command": "ecocode.setupCliInWorkspace",
+        "title": "EcoCode: Setup CLI In Workspace"
+      },
+      {
+        "command": "ecocode.showSetupGuide",
+        "title": "EcoCode: Show CLI Setup Guide"
       }
     ],
     "configuration": {

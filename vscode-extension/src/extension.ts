@@ -1,15 +1,19 @@
 import * as vscode from "vscode";
+import { existsSync } from "node:fs";
+import * as path from "node:path";
 import { getDashboardHtml } from "./dashboard";
 import { loadSettings, profileScript, profileWorkspace } from "./ecocodeRunner";
 import { DashboardState } from "./types";
 
 class EcoCodeController implements vscode.WebviewViewProvider {
+  private static readonly ECOCODE_SOURCE_URL = "git+https://github.com/LeonardLeroy/EcoCode.git";
   private view: vscode.WebviewView | undefined;
   private readonly output = vscode.window.createOutputChannel("EcoCode Insights");
   private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   private liveTimer: NodeJS.Timeout | undefined;
   private workspaceScanInFlight = false;
   private fileScanInFlight = false;
+  private cliMissingPromptShown = false;
 
   private state: DashboardState = {
     updatedAtIso: new Date(0).toISOString(),
@@ -139,7 +143,9 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Workspace scan failed: ${message}`);
       this.pushState();
-      vscode.window.showErrorMessage(`EcoCode workspace scan failed: ${message}`);
+      if (showFeedback) {
+        await this.showScanError("workspace", message);
+      }
     } finally {
       this.workspaceScanInFlight = false;
     }
@@ -183,10 +189,94 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Current file scan failed: ${message}`);
       this.pushState();
-      vscode.window.showErrorMessage(`EcoCode file scan failed: ${message}`);
+      if (showFeedback) {
+        await this.showScanError("file", message);
+      }
     } finally {
       this.fileScanInFlight = false;
     }
+  }
+
+  async setupCliInWorkspace(): Promise<void> {
+    const workspaceRoot = this.getWorkspaceRoot();
+    if (!workspaceRoot) {
+      vscode.window.showWarningMessage("Open a workspace folder before running EcoCode CLI setup.");
+      return;
+    }
+
+    const hasLocalEcoCodeProject = existsSync(path.join(workspaceRoot.fsPath, "pyproject.toml"));
+    const installTarget = hasLocalEcoCodeProject
+      ? "-e ."
+      : `\"${EcoCodeController.ECOCODE_SOURCE_URL}\"`;
+
+    const setupCommand =
+      process.platform === "win32"
+        ? `py -3 -m venv .venv; .\\.venv\\Scripts\\python -m pip install --upgrade pip; .\\.venv\\Scripts\\python -m pip install ${installTarget}`
+        : `python3 -m venv .venv && ./.venv/bin/python -m pip install --upgrade pip && ./.venv/bin/python -m pip install ${installTarget}`;
+
+    const terminal = vscode.window.createTerminal({
+      name: "EcoCode Setup",
+      cwd: workspaceRoot.fsPath,
+      env: {
+        HISTFILE: "/tmp/ecocode_setup_history",
+      },
+    });
+    terminal.show(true);
+    terminal.sendText(setupCommand, true);
+    const mode = hasLocalEcoCodeProject ? "local project (-e .)" : "source install from GitHub";
+    vscode.window.showInformationMessage(`EcoCode setup started in terminal: EcoCode Setup (${mode}).`);
+  }
+
+  async showSetupGuide(): Promise<void> {
+    const content = [
+      "# EcoCode CLI Setup",
+      "",
+      "EcoCode Insights needs the EcoCode CLI to run scans.",
+      "",
+      "## Option 1: Install from local source (recommended if you cloned EcoCode repo)",
+      "",
+      "### Linux / macOS",
+      "```bash",
+      "python3 -m venv .venv",
+      "./.venv/bin/python -m pip install --upgrade pip",
+      "./.venv/bin/python -m pip install -e .",
+      "```",
+      "",
+      "### Windows (PowerShell)",
+      "```powershell",
+      "py -3 -m venv .venv",
+      ".\\.venv\\Scripts\\python -m pip install --upgrade pip",
+      ".\\.venv\\Scripts\\python -m pip install -e .",
+      "```",
+      "",
+      "## Option 2: Install from GitHub source (no local clone required)",
+      "",
+      "### Linux / macOS",
+      "```bash",
+      "python3 -m venv .venv",
+      "./.venv/bin/python -m pip install --upgrade pip",
+      "./.venv/bin/python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
+      "```",
+      "",
+      "### Windows (PowerShell)",
+      "```powershell",
+      "py -3 -m venv .venv",
+      ".\\.venv\\Scripts\\python -m pip install --upgrade pip",
+      ".\\.venv\\Scripts\\python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
+      "```",
+      "",
+      "## If CLI is still not detected",
+      "Set `ecocode.cliPath` in VS Code settings to the absolute CLI path.",
+    ].join("\n");
+
+    const document = await vscode.workspace.openTextDocument({
+      language: "markdown",
+      content,
+    });
+    await vscode.window.showTextDocument(document, {
+      preview: true,
+      viewColumn: vscode.ViewColumn.Beside,
+    });
   }
 
   async configureScanFilters(): Promise<void> {
@@ -374,6 +464,39 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     this.output.appendLine(`[${new Date().toISOString()}] ${message}`);
   }
 
+  private async showScanError(scope: "workspace" | "file", message: string): Promise<void> {
+    const label = scope === "workspace" ? "workspace" : "file";
+    if (this.isCliMissingError(message)) {
+      if (this.cliMissingPromptShown) {
+        return;
+      }
+      this.cliMissingPromptShown = true;
+      const action = await vscode.window.showWarningMessage(
+        `EcoCode ${label} scan failed: CLI not found.`,
+        "Setup CLI",
+        "Open Settings",
+        "Show Setup Guide",
+      );
+      if (action === "Setup CLI") {
+        await this.setupCliInWorkspace();
+      }
+      if (action === "Open Settings") {
+        await vscode.commands.executeCommand("workbench.action.openSettings", "ecocode.cliPath");
+      }
+      if (action === "Show Setup Guide") {
+        await this.showSetupGuide();
+      }
+      return;
+    }
+
+    vscode.window.showErrorMessage(`EcoCode ${label} scan failed: ${message}`);
+  }
+
+  private isCliMissingError(message: string): boolean {
+    const normalized = message.toLowerCase();
+    return normalized.includes("ecocode cli not found") || normalized.includes("spawn ecocode enoent");
+  }
+
   private errorMessage(error: unknown): string {
     if (error instanceof Error && error.message) {
       return error.message;
@@ -391,6 +514,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("ecocode.scanWorkspace", async () => controller.scanWorkspace()),
     vscode.commands.registerCommand("ecocode.scanCurrentFile", async () => controller.scanCurrentFile()),
     vscode.commands.registerCommand("ecocode.configureScanFilters", async () => controller.configureScanFilters()),
+    vscode.commands.registerCommand("ecocode.setupCliInWorkspace", async () => controller.setupCliInWorkspace()),
+    vscode.commands.registerCommand("ecocode.showSetupGuide", async () => controller.showSetupGuide()),
     vscode.commands.registerCommand("ecocode.startAutoRefresh", () => controller.startLiveMode()),
     vscode.commands.registerCommand("ecocode.stopAutoRefresh", () => controller.stopLiveMode()),
     { dispose: () => controller.dispose() },

@@ -131,7 +131,7 @@ async function runEcoCode(cliPath: string, args: string[], cwd: string): Promise
     const maybe = error as { stdout?: string; stderr?: string; message?: string; code?: string };
     if (maybe.code === "ENOENT") {
       throw new Error(
-        "EcoCode CLI not found. Set ecocode.cliPath or create .venv with EcoCode installed (for example: .venv/bin/ecocode).",
+        "EcoCode CLI not found. Set ecocode.cliPath or install from sources in a local .venv (for example: ./.venv/bin/python -m pip install -e . or from GitHub source).",
       );
     }
     const details = (maybe.stderr || maybe.stdout || maybe.message || "Unknown EcoCode execution error").trim();
