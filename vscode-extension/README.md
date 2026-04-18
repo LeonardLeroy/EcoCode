@@ -4,7 +4,7 @@ EcoCode Insights is a VS Code extension that runs EcoCode CLI scans and displays
 
 ## Demo
 
-![EcoCode Insights demo](media/EcocodeGIF.gif)
+![EcoCode Insights demo](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/EcocodeGIF.gif)
 
 ## Important
 
