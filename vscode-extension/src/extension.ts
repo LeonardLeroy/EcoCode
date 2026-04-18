@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
-import { existsSync } from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { getDashboardHtml } from "./dashboard";
-import { loadSettings, profileScript, profileWorkspace } from "./ecocodeRunner";
+import { getGlobalInstallRoot, getGlobalPythonPath, loadSettings, profileScript, profileWorkspace } from "./ecocodeRunner";
 import { DashboardState } from "./types";
 
 class EcoCodeController implements vscode.WebviewViewProvider {
-  private static readonly ECOCODE_SOURCE_URL = "git+https://github.com/LeonardLeroy/EcoCode.git";
   private view: vscode.WebviewView | undefined;
   private readonly output = vscode.window.createOutputChannel("EcoCode Insights");
   private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -198,72 +197,63 @@ class EcoCodeController implements vscode.WebviewViewProvider {
   }
 
   async setupCliInWorkspace(): Promise<void> {
-    const workspaceRoot = this.getWorkspaceRoot();
-    if (!workspaceRoot) {
-      vscode.window.showWarningMessage("Open a workspace folder before running EcoCode CLI setup.");
-      return;
-    }
-
-    const hasLocalEcoCodeProject = existsSync(path.join(workspaceRoot.fsPath, "pyproject.toml"));
-    const installTarget = hasLocalEcoCodeProject
-      ? "-e ."
-      : `\"${EcoCodeController.ECOCODE_SOURCE_URL}\"`;
-
-    const setupCommand =
-      process.platform === "win32"
-        ? `py -3 -m venv .venv; .\\.venv\\Scripts\\python -m pip install --upgrade pip; .\\.venv\\Scripts\\python -m pip install ${installTarget}`
-        : `python3 -m venv .venv && ./.venv/bin/python -m pip install --upgrade pip && ./.venv/bin/python -m pip install ${installTarget}`;
-
     const terminal = vscode.window.createTerminal({
       name: "EcoCode Setup",
-      cwd: workspaceRoot.fsPath,
+      cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir(),
       env: {
         HISTFILE: "/tmp/ecocode_setup_history",
       },
     });
+
+    const globalPythonPath = getGlobalPythonPath();
+    const globalInstallRoot = getGlobalInstallRoot();
+
+    const setupCommand =
+      process.platform === "win32"
+        ? [
+            `New-Item -ItemType Directory -Force -Path \"${globalInstallRoot}\" | Out-Null`,
+            `py -3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
+            `\"${globalPythonPath}\" -m pip install --upgrade pip`,
+            `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
+          ].join(" && ")
+        : [
+            `mkdir -p \"${globalInstallRoot}\"`,
+            `python3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
+            `\"${globalPythonPath}\" -m pip install --upgrade pip`,
+            `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
+          ].join(" && ");
+
     terminal.show(true);
     terminal.sendText(setupCommand, true);
-    const mode = hasLocalEcoCodeProject ? "local project (-e .)" : "source install from GitHub";
-    vscode.window.showInformationMessage(`EcoCode setup started in terminal: EcoCode Setup (${mode}).`);
+    vscode.window.showInformationMessage(`EcoCode setup started in terminal. Global CLI will be installed at ${process.platform === "win32" ? path.join(globalInstallRoot, "venv", "Scripts", "ecocode.exe") : path.join(globalInstallRoot, "venv", "bin", "ecocode")}.`);
   }
 
   async showSetupGuide(): Promise<void> {
     const content = [
       "# EcoCode CLI Setup",
       "",
-      "EcoCode Insights needs the EcoCode CLI to run scans.",
+      "EcoCode Insights needs the EcoCode CLI to run scans. This setup is global and only needs to be done once.",
       "",
-      "## Option 1: Install from local source (recommended if you cloned EcoCode repo)",
+      "## Global installation (recommended)",
       "",
       "### Linux / macOS",
       "```bash",
-      "python3 -m venv .venv",
-      "./.venv/bin/python -m pip install --upgrade pip",
-      "./.venv/bin/python -m pip install -e .",
+      "python3 -m venv ~/.local/share/ecocode/venv",
+      "~/.local/share/ecocode/venv/bin/python -m pip install --upgrade pip",
+      "~/.local/share/ecocode/venv/bin/python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
       "```",
       "",
       "### Windows (PowerShell)",
       "```powershell",
-      "py -3 -m venv .venv",
-      ".\\.venv\\Scripts\\python -m pip install --upgrade pip",
-      ".\\.venv\\Scripts\\python -m pip install -e .",
+      "py -3 -m venv $env:APPDATA\\EcoCode\\venv",
+      "$env:APPDATA\\EcoCode\\venv\\Scripts\\python -m pip install --upgrade pip",
+      "$env:APPDATA\\EcoCode\\venv\\Scripts\\python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
       "```",
       "",
-      "## Option 2: Install from GitHub source (no local clone required)",
-      "",
-      "### Linux / macOS",
-      "```bash",
-      "python3 -m venv .venv",
-      "./.venv/bin/python -m pip install --upgrade pip",
-      "./.venv/bin/python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
-      "```",
-      "",
-      "### Windows (PowerShell)",
-      "```powershell",
-      "py -3 -m venv .venv",
-      ".\\.venv\\Scripts\\python -m pip install --upgrade pip",
-      ".\\.venv\\Scripts\\python -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"",
-      "```",
+      "## What this gives you",
+      "- One global EcoCode CLI for every workspace",
+      "- No need to clone the repo just to use the extension",
+      "- The extension will auto-detect the global CLI first",
       "",
       "## If CLI is still not detected",
       "Set `ecocode.cliPath` in VS Code settings to the absolute CLI path.",

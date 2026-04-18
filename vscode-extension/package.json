@@ -2,7 +2,7 @@
   "name": "ecocode-vscode",
   "displayName": "EcoCode Insights",
   "description": "Live-ish repository energy/performance insights powered by EcoCode CLI",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "ecocode",
   "icon": "media/Ecocode.png",
   "license": "MIT",

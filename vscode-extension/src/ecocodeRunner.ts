@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import * as vscode from "vscode";
@@ -38,7 +39,7 @@ function ensureStringArray(value: unknown): string[] {
 export function loadSettings(): ExtensionSettings {
   const config = vscode.workspace.getConfiguration("ecocode");
   return {
-    cliPath: config.get<string>("cliPath", "ecocode"),
+    cliPath: config.get<string>("cliPath", ""),
     collector: config.get<CollectorType>("collector", "placeholder"),
     maxFiles: Math.max(1, ensureNumber(config.get("maxFiles"), 200)),
     runs: Math.max(1, ensureNumber(config.get("runs"), 1)),
@@ -50,6 +51,41 @@ export function loadSettings(): ExtensionSettings {
     liveModeEnabled: config.get<boolean>("liveModeEnabled", true),
     liveScope: config.get<"workspace" | "file" | "both">("liveScope", "both"),
   };
+}
+
+export function getGlobalInstallRoot(): string {
+  const configuredRoot = process.env.ECOCODE_HOME?.trim();
+  if (configuredRoot) {
+    return configuredRoot;
+  }
+
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+    return path.join(appData, "EcoCode");
+  }
+
+  const xdgDataHome = process.env.XDG_DATA_HOME?.trim();
+  if (xdgDataHome) {
+    return path.join(xdgDataHome, "ecocode");
+  }
+
+  return path.join(os.homedir(), ".local", "share", "ecocode");
+}
+
+export function getGlobalCliPath(): string {
+  const root = getGlobalInstallRoot();
+  if (process.platform === "win32") {
+    return path.join(root, "venv", "Scripts", "ecocode.exe");
+  }
+  return path.join(root, "venv", "bin", "ecocode");
+}
+
+export function getGlobalPythonPath(): string {
+  const root = getGlobalInstallRoot();
+  if (process.platform === "win32") {
+    return path.join(root, "venv", "Scripts", "python.exe");
+  }
+  return path.join(root, "venv", "bin", "python");
 }
 
 interface EcoCodeExecutionTarget {
@@ -71,6 +107,11 @@ async function resolveExecutionTarget(cliPath: string, cwd: string): Promise<Eco
 
   if (normalizedCliPath.length > 0 && normalizedCliPath !== "ecocode") {
     return { command: normalizedCliPath, baseArgs: [] };
+  }
+
+  const globalCliPath = getGlobalCliPath();
+  if (await exists(globalCliPath)) {
+    return { command: globalCliPath, baseArgs: [] };
   }
 
   const unixCli = path.join(cwd, ".venv", "bin", "ecocode");
@@ -131,7 +172,7 @@ async function runEcoCode(cliPath: string, args: string[], cwd: string): Promise
     const maybe = error as { stdout?: string; stderr?: string; message?: string; code?: string };
     if (maybe.code === "ENOENT") {
       throw new Error(
-        "EcoCode CLI not found. Set ecocode.cliPath or install from sources in a local .venv (for example: ./.venv/bin/python -m pip install -e . or from GitHub source).",
+        `EcoCode CLI not found. Run EcoCode: Setup CLI once to install it globally at ${getGlobalCliPath()} or set ecocode.cliPath to a valid executable path.`,
       );
     }
     const details = (maybe.stderr || maybe.stdout || maybe.message || "Unknown EcoCode execution error").trim();
