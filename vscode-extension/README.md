@@ -2,6 +2,10 @@
 
 EcoCode Insights is a VS Code extension that runs EcoCode CLI scans and displays repository performance, energy/runtime metrics in a dashboard.
 
+## Demo
+
+![EcoCode Insights demo](media/EcocodeGIF.gif)
+
 ## Important
 
 The extension requires EcoCode CLI to be available. If needed, set `ecocode.cliPath` to the absolute executable path.
