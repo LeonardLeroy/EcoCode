@@ -1,11 +1,5 @@
 # EcoCode
 
-Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
-
-[![EcoCode Insights logo](vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
-
-[![EcoCode Insights demo GIF](vscode-extension/media/EcocodeGIF.gif)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
-
 EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
 
 ## What this project is for?
@@ -47,6 +41,9 @@ The goal is to become a reference platform for sustainable software engineering:
 If you want full details (commands, outputs, examples, roadmap, etc.), see the complete project documentation:
 
 [documentation.md](documentation.md)
+
+Quick note for local LLM users:
+- Ollama endpoint is configurable with `ECOCODE_OLLAMA_BASE_URL` (HTTP or HTTPS).
 
 ## Contributing
 
