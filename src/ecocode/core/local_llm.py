@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -9,6 +10,8 @@ from ecocode.core.optimizer import OptimizationSuggestion
 
 
 DEFAULT_OLLAMA_CODING_MODEL = "qwen2.5-coder:7b"
+DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_BASE_URL_ENV_VAR = "ECOCODE_OLLAMA_BASE_URL"
 DISCOURAGED_OLLAMA_MODELS = {"granite3.1-moe", "granite3.1-moe:latest"}
 PREFERRED_OLLAMA_MODELS = (
     "qwen2.5-coder:32b",
@@ -19,6 +22,13 @@ PREFERRED_OLLAMA_MODELS = (
     "codellama:13b",
     "codellama:7b",
 )
+
+
+def _ollama_url(path: str) -> str:
+    base_url = os.getenv(OLLAMA_BASE_URL_ENV_VAR, DEFAULT_OLLAMA_BASE_URL).strip().rstrip("/")
+    if not base_url:
+        base_url = DEFAULT_OLLAMA_BASE_URL
+    return f"{base_url}{path}"
 
 
 def fetch_local_llm_suggestions(
@@ -57,7 +67,7 @@ def fetch_local_llm_suggestions(
     }
 
     request = Request(
-        "http://127.0.0.1:11434/api/generate",
+        _ollama_url("/api/generate"),
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -140,7 +150,7 @@ def fetch_local_llm_candidate_patch(
     }
 
     request = Request(
-        "http://127.0.0.1:11434/api/generate",
+        _ollama_url("/api/generate"),
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -194,7 +204,7 @@ def resolve_ollama_model(requested_model: str, timeout_seconds: float) -> str:
 
 def list_ollama_models(timeout_seconds: float) -> list[str]:
     request = Request(
-        "http://127.0.0.1:11434/api/tags",
+        _ollama_url("/api/tags"),
         headers={"Content-Type": "application/json"},
         method="GET",
     )
