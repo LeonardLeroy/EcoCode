@@ -42,6 +42,9 @@ The goal is to become a reference platform for sustainable software engineering:
 - smarter optimization recommendations,
 - simpler integration into team workflows.
 
+## Quick note for local LLM users:
+- Ollama endpoint is configurable with `ECOCODE_OLLAMA_BASE_URL` (HTTP or HTTPS).
+
 ## Full documentation
 
 If you want full details (commands, outputs, examples, roadmap, etc.), see the complete project documentation:
