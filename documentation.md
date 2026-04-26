@@ -221,6 +221,16 @@ max_suggestions = 3
 timeout_seconds = 20.0
 ```
 
+4. (Optional) Override the Ollama API base URL with an environment variable.
+
+Examples:
+- `export ECOCODE_OLLAMA_BASE_URL=http://127.0.0.1:11434`
+- `export ECOCODE_OLLAMA_BASE_URL=https://ollama.example.com:11434`
+
+Notes:
+- Default URL is `http://127.0.0.1:11434`.
+- EcoCode appends provider paths automatically (`/api/generate`, `/api/tags`).
+
 Model guidance:
 - There is no universal single best model for every machine and codebase.
 - Prefer coding-focused models (`qwen2.5-coder`, `deepseek-coder`, `codellama`) over general MoE chat models.
@@ -256,6 +266,7 @@ Model guidance:
 - `optimize.llm.model`: local model name used by the provider (recommended: `qwen2.5-coder:7b` or better).
 - `optimize.llm.max_suggestions`: cap for LLM-proposed suggestions merged into output.
 - `optimize.llm.timeout_seconds`: timeout for local provider requests.
+- `ECOCODE_OLLAMA_BASE_URL` (env var): optional provider base URL override (supports `http` or `https`).
 
 ### Reliability and Validation
 
