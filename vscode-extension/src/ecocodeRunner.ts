@@ -212,13 +212,18 @@ export async function profileWorkspace(rootPath: string): Promise<EcoCodeRepoRep
 
 export async function profileScript(scriptPath: string, workspacePath: string): Promise<EcoCodeScriptReport> {
   const settings = loadSettings();
+  let runsForFile = settings.runs;
+  if (runsForFile < 2) {
+    runsForFile = 3;
+  }
+
   const args = [
     "profile",
     scriptPath,
     "--collector",
     settings.collector,
     "--runs",
-    String(settings.runs),
+    String(runsForFile),
     "--json",
   ];
 

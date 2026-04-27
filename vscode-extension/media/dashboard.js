@@ -53,11 +53,17 @@ function renderStability(report) {
   const unstable = report.stability.unstable;
   const cls = unstable ? "error" : "";
   const status = unstable ? "UNSTABLE" : "Stable";
-  const cv = report.summary ? report.summary.total_energy_wh_cv_pct : "n/a";
+  function formatCvValue(v) {
+    if (v === null || v === undefined) return "n/a";
+    if (typeof v === "number") return Number(v).toFixed(3);
+    return String(v);
+  }
+
+  const cv = report.summary ? formatCvValue(report.summary.total_energy_wh_cv_pct) : "n/a";
   el.stabilitySection.innerHTML = `
     <h2>Stability</h2>
     <p class="${cls}">Status: <strong>${status}</strong></p>
-    <p>Energy CV (%): <strong>${cv}</strong></p>
+    <p>Energy variability (CV %): <strong>${cv}</strong></p>
     <p>Threshold (%): <strong>${report.stability.max_energy_cv_pct}</strong></p>
   `;
 }
@@ -107,13 +113,20 @@ function renderCurrentFile(report) {
     return;
   }
 
-  const cv = report.summary ? report.summary.estimated_energy_wh_cv_pct : "n/a";
+  function formatCvValue(v) {
+    if (v === null || v === undefined) return "n/a (single run)";
+    if (typeof v === "number") return Number(v).toFixed(3);
+    return String(v);
+  }
+
   const safePath = escapeHtml(report.script);
+  const runs = report.runs || 1;
+  const cv = report.summary ? formatCvValue(report.summary.estimated_energy_wh_cv_pct) : formatCvValue(undefined);
   el.currentFileSection.innerHTML = `
     <h2>Current File</h2>
     <p class="current-file-path"><strong class="file-path">${safePath}</strong></p>
     <p>CPU: ${report.cpu_seconds}s | Memory: ${report.memory_mb}MB | Energy: ${report.estimated_energy_wh}Wh</p>
-    <p>Sustainability score: <strong>${report.sustainability_score}/100</strong> | CV: <strong>${cv}</strong></p>
+    <p>Sustainability score: <strong>${report.sustainability_score}/100</strong> | Energy variability (CV %): <strong>${cv}</strong> <small>(runs: ${runs})</small></p>
   `;
 }
 
