@@ -1,0 +1,191 @@
+{
+  "name": "ecocode-vscode",
+  "displayName": "EcoCode Insights",
+  "description": "Live-ish repository energy/performance insights powered by EcoCode CLI",
+  "version": "0.1.8",
+  "publisher": "ecocode",
+  "icon": "media/Ecocode.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeonardLeroy/EcoCode.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20.0.0"
+  },
+  "categories": [
+    "Visualization",
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "ecocode",
+    "energy",
+    "sustainability",
+    "green-software",
+    "green-it",
+    "performance",
+    "optimization",
+    "profiling",
+    "python",
+    "metrics",
+    "ci",
+    "carbon"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:ecocode.openDashboard",
+    "onCommand:ecocode.scanWorkspace",
+    "onCommand:ecocode.scanCurrentFile",
+    "onCommand:ecocode.setupCliInWorkspace",
+    "onCommand:ecocode.showSetupGuide",
+    "onCommand:ecocode.startAutoRefresh",
+    "onCommand:ecocode.stopAutoRefresh",
+    "onCommand:ecocode.configureScanFilters"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ecocode.openDashboard",
+        "title": "EcoCode: Open Dashboard"
+      },
+      {
+        "command": "ecocode.scanWorkspace",
+        "title": "EcoCode: Scan Workspace"
+      },
+      {
+        "command": "ecocode.scanCurrentFile",
+        "title": "EcoCode: Scan Current File"
+      },
+      {
+        "command": "ecocode.startAutoRefresh",
+        "title": "EcoCode: Start Auto Refresh"
+      },
+      {
+        "command": "ecocode.stopAutoRefresh",
+        "title": "EcoCode: Stop Auto Refresh"
+      },
+      {
+        "command": "ecocode.configureScanFilters",
+        "title": "EcoCode: Configure Scan Filters"
+      },
+      {
+        "command": "ecocode.setupCliInWorkspace",
+        "title": "EcoCode: Setup CLI In Workspace"
+      },
+      {
+        "command": "ecocode.showSetupGuide",
+        "title": "EcoCode: Show CLI Setup Guide"
+      }
+    ],
+    "configuration": {
+      "title": "EcoCode",
+      "properties": {
+        "ecocode.cliPath": {
+          "type": "string",
+          "default": "ecocode",
+          "description": "Path to EcoCode CLI executable."
+        },
+        "ecocode.collector": {
+          "type": "string",
+          "enum": [
+            "placeholder",
+            "runtime"
+          ],
+          "default": "placeholder",
+          "description": "Collector backend used by scans."
+        },
+        "ecocode.maxFiles": {
+          "type": "number",
+          "default": 200,
+          "minimum": 1,
+          "description": "Maximum files to scan in workspace scan."
+        },
+        "ecocode.runs": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "description": "Number of repeated runs for stability statistics."
+        },
+        "ecocode.extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Optional file extensions to include (for example: .py, .js). Empty means EcoCode defaults."
+        },
+        "ecocode.includeGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Optional include glob patterns, repeatable semantics."
+        },
+        "ecocode.excludeGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.venv/**",
+            "**/dist/**",
+            "**/build/**"
+          ],
+          "description": "Optional exclude glob patterns."
+        },
+        "ecocode.autoRefreshSeconds": {
+          "type": "number",
+          "default": 20,
+          "minimum": 10,
+          "description": "Live mode refresh interval in seconds."
+        },
+        "ecocode.showTopFiles": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "description": "How many files to show in Top Files list."
+        },
+        "ecocode.liveModeEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable continuous live scanning in the background."
+        },
+        "ecocode.liveScope": {
+          "type": "string",
+          "enum": [
+            "workspace",
+            "file",
+            "both"
+          ],
+          "default": "both",
+          "description": "Choose whether live mode scans workspace, current file, or both."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "ecocode.insightsView",
+          "name": "EcoCode Insights",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.0",
+    "typescript": "^5.6.3"
+  }
+}
