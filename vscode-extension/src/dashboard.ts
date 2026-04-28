@@ -23,6 +23,7 @@ export function getDashboardHtml(webview: vscode.Webview, extensionUri: vscode.U
     <div class="controls">
       <button id="refreshWorkspace">Scan Workspace</button>
       <button id="scanCurrentFile">Scan Current File</button>
+      <span id="scanStatus" class="scan-status hidden"></span>
     </div>
   </header>
 

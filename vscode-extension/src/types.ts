@@ -66,6 +66,8 @@ export interface DashboardState {
   autoRefreshActive: boolean;
   autoRefreshSeconds: number;
   showTopFiles: number;
+  isScanning?: boolean;
+  scanningScope?: "workspace" | "file";
   workspaceReport?: EcoCodeRepoReport;
   scriptReport?: EcoCodeScriptReport;
   lastError?: string;

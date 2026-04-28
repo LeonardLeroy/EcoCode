@@ -13,6 +13,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
   private workspaceScanInFlight = false;
   private fileScanInFlight = false;
   private cliMissingPromptShown = false;
+  private dotTimer: NodeJS.Timeout | undefined;
 
   private state: DashboardState = {
     updatedAtIso: new Date(0).toISOString(),
@@ -30,28 +31,28 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     this.context.subscriptions.push(this.output, this.statusBar);
 
     this.context.subscriptions.push(
-      vscode.window.onDidChangeActiveTextEditor(() => {
-        const settings = loadSettings();
-        if (!settings.liveModeEnabled) {
-          return;
-        }
-        if (settings.liveScope === "file" || settings.liveScope === "both") {
-          void this.scanCurrentFile(false);
-        }
-      }),
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        const settings = loadSettings();
-        if (!settings.liveModeEnabled) {
-          return;
-        }
-        const activeEditor = vscode.window.activeTextEditor;
-        if (!activeEditor || activeEditor.document.uri.toString() !== document.uri.toString()) {
-          return;
-        }
-        if (settings.liveScope === "file" || settings.liveScope === "both") {
-          void this.scanCurrentFile(false);
-        }
-      }),
+      //   vscode.window.onDidChangeActiveTextEditor(() => {
+      //     const settings = loadSettings();
+      //     if (!settings.liveModeEnabled) {
+      //       return;
+      //     }
+      //     if (settings.liveScope === "file" || settings.liveScope === "both") {
+      //       void this.scanCurrentFile(false);
+      //     }
+      //   }),
+      //   vscode.workspace.onDidSaveTextDocument((document) => {
+      //     const settings = loadSettings();
+      //     if (!settings.liveModeEnabled) {
+      //       return;
+      //     }
+      //     const activeEditor = vscode.window.activeTextEditor;
+      //     if (!activeEditor || activeEditor.document.uri.toString() !== document.uri.toString()) {
+      //       return;
+      //     }
+      //     if (settings.liveScope === "file" || settings.liveScope === "both") {
+      //       void this.scanCurrentFile(false);
+      //     }
+      //   }),
     );
 
     this.context.subscriptions.push(
@@ -70,8 +71,11 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     );
 
     const initialSettings = loadSettings();
-    if (initialSettings.liveModeEnabled) {
-      this.startLiveMode(false);
+    if (initialSettings.liveModeEnabled && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+      // Delay slightly so the webview has time to register before the first scan notification fires
+      setTimeout(() => {
+        this.startLiveMode(false);
+      }, 2000);
     }
   }
 
@@ -125,28 +129,43 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     this.workspaceScanInFlight = true;
+    this.startScanningUI("workspace");
+
     try {
-      const report = await profileWorkspace(workspaceRoot.fsPath);
+      let report!: import("./types").EcoCodeRepoReport;
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Window,
+          title: "EcoCode",
+          cancellable: false,
+        },
+        async (progress) => {
+          progress.report({ message: "Scanning workspace…" });
+          report = await profileWorkspace(workspaceRoot.fsPath);
+        },
+      );
+
       this.state.workspaceReport = report;
       this.state.updatedAtIso = new Date().toISOString();
       this.state.lastError = undefined;
       this.log("Workspace scan complete.");
-      this.updateStatusBar();
-      this.pushState();
       if (showFeedback) {
-        vscode.window.showInformationMessage(`EcoCode scan complete: ${report.total_files} files, ${report.total_energy_wh} Wh`);
+        vscode.window.showInformationMessage(
+          `EcoCode scan complete: ${report.total_files} files, ${report.total_energy_wh} Wh`,
+        );
       }
     } catch (error) {
       const message = this.errorMessage(error);
       this.state.lastError = message;
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Workspace scan failed: ${message}`);
-      this.pushState();
       if (showFeedback) {
         await this.showScanError("workspace", message);
       }
     } finally {
+      this.endScanningUI();
       this.workspaceScanInFlight = false;
+      this.pushState();
     }
   }
 
@@ -158,7 +177,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       if (showFeedback) {
-        vscode.window.showWarningMessage("Open a file before running current file scan.");
+        vscode.window.showInformationMessage("Open a file before running current file scan.");
       }
       return;
     }
@@ -170,13 +189,26 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     this.fileScanInFlight = true;
+    this.startScanningUI("file");
+
     try {
-      const report = await profileScript(editor.document.uri.fsPath, workspaceRoot.fsPath);
+      let report!: import("./types").EcoCodeScriptReport;
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Window,
+          title: "EcoCode",
+          cancellable: false,
+        },
+        async (progress) => {
+          progress.report({ message: "Scanning file…" });
+          report = await profileScript(editor.document.uri.fsPath, workspaceRoot.fsPath);
+        },
+      );
+
       this.state.scriptReport = report;
       this.state.updatedAtIso = new Date().toISOString();
       this.state.lastError = undefined;
       this.log(`Current file scan complete: ${report.script}`);
-      this.pushState();
       if (showFeedback) {
         vscode.window.showInformationMessage(
           `EcoCode file scan complete: ${report.estimated_energy_wh} Wh (${report.sustainability_score}/100)`,
@@ -187,12 +219,13 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.lastError = message;
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Current file scan failed: ${message}`);
-      this.pushState();
       if (showFeedback) {
         await this.showScanError("file", message);
       }
     } finally {
+      this.endScanningUI();
       this.fileScanInFlight = false;
+      this.pushState();
     }
   }
 
@@ -211,17 +244,17 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     const setupCommand =
       process.platform === "win32"
         ? [
-            `New-Item -ItemType Directory -Force -Path \"${globalInstallRoot}\" | Out-Null`,
-            `py -3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
-            `\"${globalPythonPath}\" -m pip install --upgrade pip`,
-            `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
-          ].join(" && ")
+          `New-Item -ItemType Directory -Force -Path \"${globalInstallRoot}\" | Out-Null`,
+          `py -3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
+          `\"${globalPythonPath}\" -m pip install --upgrade pip`,
+          `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
+        ].join(" && ")
         : [
-            `mkdir -p \"${globalInstallRoot}\"`,
-            `python3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
-            `\"${globalPythonPath}\" -m pip install --upgrade pip`,
-            `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
-          ].join(" && ");
+          `mkdir -p \"${globalInstallRoot}\"`,
+          `python3 -m venv \"${path.join(globalInstallRoot, "venv")}\"`,
+          `\"${globalPythonPath}\" -m pip install --upgrade pip`,
+          `\"${globalPythonPath}\" -m pip install \"git+https://github.com/LeonardLeroy/EcoCode.git\"`,
+        ].join(" && ");
 
     terminal.show(true);
     terminal.sendText(setupCommand, true);
@@ -377,23 +410,32 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     this.state.showTopFiles = settings.showTopFiles;
     this.state.autoRefreshActive = true;
 
+    const hasWorkspace = !!vscode.workspace.workspaceFolders?.length;
+
     this.liveTimer = setInterval(async () => {
       const current = loadSettings();
-      if (current.liveScope === "workspace" || current.liveScope === "both") {
+      const hasWs = !!vscode.workspace.workspaceFolders?.length;
+      if (hasWs && (current.liveScope === "workspace" || current.liveScope === "both")) {
         await this.scanWorkspace(false);
       }
-      if (current.liveScope === "file" || current.liveScope === "both") {
+      if (vscode.window.activeTextEditor && (current.liveScope === "file" || current.liveScope === "both")) {
         await this.scanCurrentFile(false);
       }
     }, settings.autoRefreshSeconds * 1000);
 
     this.pushState();
-    if (settings.liveScope === "workspace" || settings.liveScope === "both") {
-      this.scanWorkspace(false).catch((error) => {
+    if (hasWorkspace && (settings.liveScope === "workspace" || settings.liveScope === "both")) {
+      this.scanWorkspace(false).then(() => {
+        if (this.state.workspaceReport) {
+          vscode.window.showInformationMessage(
+            `EcoCode auto-scan complete: ${this.state.workspaceReport.total_files} files, ${this.state.workspaceReport.total_energy_wh} Wh`
+          );
+        }
+      }).catch((error) => {
         this.log(`Live mode initial workspace scan failed: ${this.errorMessage(error)}`);
       });
     }
-    if (settings.liveScope === "file" || settings.liveScope === "both") {
+    if (vscode.window.activeTextEditor && (settings.liveScope === "file" || settings.liveScope === "both")) {
       this.scanCurrentFile(false).catch((error) => {
         this.log(`Live mode initial file scan failed: ${this.errorMessage(error)}`);
       });
@@ -418,7 +460,34 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
   }
 
+  private startScanningUI(scope: "workspace" | "file"): void {
+    this.state.isScanning = true;
+    this.state.scanningScope = scope;
+    // Animated dots in status bar: Scanning. → Scanning.. → Scanning...
+    let dots = 1;
+    const label = scope === "workspace" ? "workspace" : "file";
+    const tick = (): void => {
+      this.statusBar.text = `$(sync~spin) EcoCode: Scanning ${label}${".".repeat(dots)}`;
+      dots = dots >= 3 ? 1 : dots + 1;
+    };
+    tick();
+    this.statusBar.show();
+    this.dotTimer = setInterval(tick, 500);
+    this.pushState();
+  }
+
+  private endScanningUI(): void {
+    if (this.dotTimer) {
+      clearInterval(this.dotTimer);
+      this.dotTimer = undefined;
+    }
+    this.state.isScanning = false;
+    this.state.scanningScope = undefined;
+    this.updateStatusBar();
+  }
+
   dispose(): void {
+    this.endScanningUI();
     this.stopLiveMode(false);
   }
 

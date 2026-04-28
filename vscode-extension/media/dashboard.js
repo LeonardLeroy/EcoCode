@@ -17,6 +17,7 @@ const el = {
   currentFileSection: byId("currentFileSection"),
   updatedAt: byId("updatedAt"),
   autoRefreshState: byId("autoRefreshState"),
+  scanStatus: byId("scanStatus"),
 };
 
 function escapeHtml(value) {
@@ -138,6 +139,20 @@ function applyVisibility() {
 }
 
 function render(state) {
+  // Loading state
+  const scanning = !!state.isScanning;
+  el.refreshWorkspace.disabled = scanning;
+  el.scanCurrentFile.disabled = scanning;
+
+  if (scanning) {
+    const label = state.scanningScope === "file" ? "file" : "workspace";
+    el.scanStatus.textContent = `Scanning ${label}…`;
+    el.scanStatus.classList.remove("hidden");
+  } else {
+    el.scanStatus.classList.add("hidden");
+    el.scanStatus.textContent = "";
+  }
+
   el.errorBox.classList.toggle("hidden", !state.lastError);
   el.errorBox.classList.toggle("error", !!state.lastError);
   el.errorBox.textContent = state.lastError || "";
