@@ -140,7 +140,7 @@ function applyVisibility() {
 
 function render(state) {
   // Loading state
-  const scanning = !!state.isScanning;
+  /*const scanning = !!state.isScanning;
   el.refreshWorkspace.disabled = scanning;
   el.scanCurrentFile.disabled = scanning;
 
@@ -151,7 +151,9 @@ function render(state) {
   } else {
     el.scanStatus.classList.add("hidden");
     el.scanStatus.textContent = "";
-  }
+  }*/
+  el.refreshWorkspace.disabled = false;
+  el.scanCurrentFile.disabled = false;
 
   el.errorBox.classList.toggle("hidden", !state.lastError);
   el.errorBox.classList.toggle("error", !!state.lastError);

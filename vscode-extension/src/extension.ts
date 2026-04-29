@@ -13,7 +13,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
   private workspaceScanInFlight = false;
   private fileScanInFlight = false;
   private cliMissingPromptShown = false;
-  private dotTimer: NodeJS.Timeout | undefined;
+  //private dotTimer: NodeJS.Timeout | undefined;
 
   private state: DashboardState = {
     updatedAtIso: new Date(0).toISOString(),
@@ -129,7 +129,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     this.workspaceScanInFlight = true;
-    this.startScanningUI("workspace");
+    //this.startScanningUI("workspace");
 
     try {
       let report!: import("./types").EcoCodeRepoReport;
@@ -149,6 +149,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.state.lastError = undefined;
       this.log("Workspace scan complete.");
+      this.updateStatusBar();
       if (showFeedback) {
         vscode.window.showInformationMessage(
           `EcoCode scan complete: ${report.total_files} files, ${report.total_energy_wh} Wh`,
@@ -163,7 +164,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         await this.showScanError("workspace", message);
       }
     } finally {
-      this.endScanningUI();
+      //this.endScanningUI();
       this.workspaceScanInFlight = false;
       this.pushState();
     }
@@ -189,7 +190,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     this.fileScanInFlight = true;
-    this.startScanningUI("file");
+    //this.startScanningUI("file");
 
     try {
       let report!: import("./types").EcoCodeScriptReport;
@@ -209,6 +210,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.state.lastError = undefined;
       this.log(`Current file scan complete: ${report.script}`);
+      this.updateStatusBar();
       if (showFeedback) {
         vscode.window.showInformationMessage(
           `EcoCode file scan complete: ${report.estimated_energy_wh} Wh (${report.sustainability_score}/100)`,
@@ -223,7 +225,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         await this.showScanError("file", message);
       }
     } finally {
-      this.endScanningUI();
+      //this.endScanningUI();
       this.fileScanInFlight = false;
       this.pushState();
     }
@@ -460,34 +462,34 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
   }
 
-  private startScanningUI(scope: "workspace" | "file"): void {
-    this.state.isScanning = true;
-    this.state.scanningScope = scope;
-    // Animated dots in status bar: Scanning. → Scanning.. → Scanning...
-    let dots = 1;
-    const label = scope === "workspace" ? "workspace" : "file";
-    const tick = (): void => {
-      this.statusBar.text = `$(sync~spin) EcoCode: Scanning ${label}${".".repeat(dots)}`;
-      dots = dots >= 3 ? 1 : dots + 1;
-    };
-    tick();
-    this.statusBar.show();
-    this.dotTimer = setInterval(tick, 500);
-    this.pushState();
-  }
+  //private startScanningUI(scope: "workspace" | "file"): void {
+  //  this.state.isScanning = true;
+  //  this.state.scanningScope = scope;
+  //  // Animated dots in status bar: Scanning. → Scanning.. → Scanning...
+  //  let dots = 1;
+  //  const label = scope === "workspace" ? "workspace" : "file";
+  //  const tick = (): void => {
+  //    this.statusBar.text = `$(sync~spin) EcoCode: Scanning ${label}${".".repeat(dots)}`;
+  //    dots = dots >= 3 ? 1 : dots + 1;
+  //  };
+  //  tick();
+  //  this.statusBar.show();
+  //  this.dotTimer = setInterval(tick, 500);
+  //  this.pushState();
+  //}
 
-  private endScanningUI(): void {
-    if (this.dotTimer) {
-      clearInterval(this.dotTimer);
-      this.dotTimer = undefined;
-    }
-    this.state.isScanning = false;
-    this.state.scanningScope = undefined;
-    this.updateStatusBar();
-  }
+  //private endScanningUI(): void {
+  //  if (this.dotTimer) {
+  //    clearInterval(this.dotTimer);
+  //    this.dotTimer = undefined;
+  //  }
+  //  this.state.isScanning = false;
+  //  this.state.scanningScope = undefined;
+  //  this.updateStatusBar();
+  //}
 
   dispose(): void {
-    this.endScanningUI();
+    //this.endScanningUI();
     this.stopLiveMode(false);
   }
 
