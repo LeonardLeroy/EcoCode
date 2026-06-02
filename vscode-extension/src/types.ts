@@ -1,4 +1,4 @@
-export type CollectorType = "placeholder" | "runtime";
+export type CollectorType = "placeholder" | "runtime" | "static";
 
 export interface EcoCodeRepoFileResult {
   script: string;
@@ -6,6 +6,38 @@ export interface EcoCodeRepoFileResult {
   memory_mb: number;
   estimated_energy_wh: number;
   sustainability_score: number;
+  measured?: boolean;
+  method?: string;
+}
+
+export interface EcoCodeSuggestion {
+  rule_id: string;
+  title: string;
+  rationale: string;
+  impact: "low" | "medium" | "high";
+  confidence: number;
+  language: string;
+  line?: number | null;
+}
+
+export interface EcoCodeSuggestReport {
+  schemaVersion: number;
+  command: string;
+  script: string;
+  suggestion_count: number;
+  suggestions: EcoCodeSuggestion[];
+}
+
+export interface EcoCodePatchReport {
+  schemaVersion: number;
+  command: string;
+  script: string;
+  candidate_path: string;
+  rule_id: string;
+  strategy_title: string;
+  applied: boolean;
+  changes_count: number;
+  diff: string;
 }
 
 export interface EcoCodeRepoReport {
@@ -44,6 +76,8 @@ export interface EcoCodeScriptReport {
   memory_mb: number;
   estimated_energy_wh: number;
   sustainability_score: number;
+  measured?: boolean;
+  method?: string;
   summary?: {
     cpu_seconds_mean: number;
     cpu_seconds_median: number;
@@ -70,5 +104,6 @@ export interface DashboardState {
   //scanningScope?: "workspace" | "file";
   workspaceReport?: EcoCodeRepoReport;
   scriptReport?: EcoCodeScriptReport;
+  scriptSuggestions?: EcoCodeSuggestReport;
   lastError?: string;
 }

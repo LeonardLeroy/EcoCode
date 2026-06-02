@@ -2,7 +2,7 @@
   "name": "ecocode-vscode",
   "displayName": "EcoCode Insights",
   "description": "Live-ish repository energy/performance insights powered by EcoCode CLI",
-  "version": "0.1.10",
+  "version": "0.2.0",
   "publisher": "ecocode",
   "icon": "media/Ecocode.png",
   "repository": {
@@ -34,15 +34,7 @@
     "carbon"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:ecocode.openDashboard",
-    "onCommand:ecocode.scanWorkspace",
-    "onCommand:ecocode.scanCurrentFile",
-    "onCommand:ecocode.setupCliInWorkspace",
-    "onCommand:ecocode.showSetupGuide",
-    "onCommand:ecocode.startAutoRefresh",
-    "onCommand:ecocode.stopAutoRefresh",
-    "onCommand:ecocode.configureScanFilters"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -78,6 +70,10 @@
       {
         "command": "ecocode.showSetupGuide",
         "title": "EcoCode: Show CLI Setup Guide"
+      },
+      {
+        "command": "ecocode.suggestForFile",
+        "title": "EcoCode: Suggest Optimizations For Current File"
       }
     ],
     "configuration": {
@@ -88,14 +84,36 @@
           "default": "ecocode",
           "description": "Path to EcoCode CLI executable."
         },
+        "ecocode.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 5,
+          "description": "Maximum seconds to wait for a single EcoCode CLI invocation before timing out."
+        },
+        "ecocode.installSource": {
+          "type": "string",
+          "default": "git+https://github.com/LeonardLeroy/EcoCode.git",
+          "description": "Pip install source used by 'Setup CLI' (a PyPI name like 'ecocode', a git URL, or a local path)."
+        },
         "ecocode.collector": {
           "type": "string",
           "enum": [
-            "placeholder",
-            "runtime"
+            "static",
+            "runtime",
+            "placeholder"
           ],
-          "default": "placeholder",
-          "description": "Collector backend used by scans."
+          "enumDescriptions": [
+            "Source-based estimate, never executes code (recommended for repository scans).",
+            "Real measurement: executes the file (Python and interpreted languages).",
+            "Synthetic deterministic values for demos and tests."
+          ],
+          "default": "static",
+          "description": "Collector backend used by scans. 'static' estimates without running code; 'runtime' measures by executing the file."
+        },
+        "ecocode.diagnosticsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show EcoCode optimization suggestions as inline diagnostics (squiggles) while editing."
         },
         "ecocode.maxFiles": {
           "type": "number",

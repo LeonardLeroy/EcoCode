@@ -9,12 +9,15 @@ const el = {
   showStability: byId("showStability"),
   showFiles: byId("showFiles"),
   showCurrentFile: byId("showCurrentFile"),
+  showSuggestions: byId("showSuggestions"),
   errorBox: byId("errorBox"),
   summarySection: byId("summarySection"),
   stabilitySection: byId("stabilitySection"),
   filesSection: byId("filesSection"),
   filesTableWrapper: byId("filesTableWrapper"),
   currentFileSection: byId("currentFileSection"),
+  suggestionsSection: byId("suggestionsSection"),
+  suggestionsWrapper: byId("suggestionsWrapper"),
   updatedAt: byId("updatedAt"),
   autoRefreshState: byId("autoRefreshState"),
   scanStatus: byId("scanStatus"),
@@ -27,6 +30,20 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function methodLabel(entry) {
+  if (!entry) return "";
+  if (entry.measured === true) return "measured";
+  if (entry.method === "static_estimate") return "estimated";
+  if (entry.method === "placeholder") return "synthetic";
+  return entry.method || "";
+}
+
+function methodBadge(entry) {
+  const label = methodLabel(entry);
+  if (!label) return "";
+  return ` <span class="badge badge-${label}">${label}</span>`;
 }
 
 function renderMetrics(report) {
@@ -81,7 +98,7 @@ function renderFiles(report, topLimit) {
     .map((f) => {
       const safePath = escapeHtml(f.script);
       return `<tr>
-        <td class="file-cell" title="${safePath}"><span class="file-path">${safePath}</span></td>
+        <td class="file-cell" title="${safePath}"><span class="file-path">${safePath}</span>${methodBadge(f)}</td>
         <td>${f.cpu_seconds}</td>
         <td>${f.memory_mb}</td>
         <td>${f.estimated_energy_wh}</td>
@@ -125,10 +142,38 @@ function renderCurrentFile(report) {
   const cv = report.summary ? formatCvValue(report.summary.estimated_energy_wh_cv_pct) : formatCvValue(undefined);
   el.currentFileSection.innerHTML = `
     <h2>Current File</h2>
-    <p class="current-file-path"><strong class="file-path">${safePath}</strong></p>
+    <p class="current-file-path"><strong class="file-path">${safePath}</strong>${methodBadge(report)}</p>
     <p>CPU: ${report.cpu_seconds}s | Memory: ${report.memory_mb}MB | Energy: ${report.estimated_energy_wh}Wh</p>
     <p>Sustainability score: <strong>${report.sustainability_score}/100</strong> | Energy variability (CV %): <strong>${cv}</strong> <small>(runs: ${runs})</small></p>
   `;
+}
+
+function impactRank(impact) {
+  if (impact === "high") return 0;
+  if (impact === "medium") return 1;
+  return 2;
+}
+
+function renderSuggestions(report) {
+  if (!report || !Array.isArray(report.suggestions) || report.suggestions.length === 0) {
+    el.suggestionsWrapper.innerHTML = "<p>No optimization suggestions for the current file.</p>";
+    return;
+  }
+
+  const sorted = [...report.suggestions].sort((a, b) => impactRank(a.impact) - impactRank(b.impact));
+  const items = sorted
+    .map((s) => {
+      const location = s.line ? ` <small>(line ${s.line})</small>` : "";
+      const confidence = typeof s.confidence === "number" ? s.confidence.toFixed(2) : s.confidence;
+      return `<li>
+        <span class="badge badge-impact-${escapeHtml(s.impact)}">${escapeHtml(s.impact)}</span>
+        <strong>[${escapeHtml(s.rule_id)}]</strong> ${escapeHtml(s.title)}${location}
+        <div class="suggestion-why">${escapeHtml(s.rationale)} <small>confidence ${confidence}</small></div>
+      </li>`;
+    })
+    .join("");
+
+  el.suggestionsWrapper.innerHTML = `<ul class="suggestion-list">${items}</ul>`;
 }
 
 function applyVisibility() {
@@ -136,6 +181,7 @@ function applyVisibility() {
   el.stabilitySection.classList.toggle("hidden", !el.showStability.checked);
   el.filesSection.classList.toggle("hidden", !el.showFiles.checked);
   el.currentFileSection.classList.toggle("hidden", !el.showCurrentFile.checked);
+  el.suggestionsSection.classList.toggle("hidden", !el.showSuggestions.checked);
 }
 
 function render(state) {
@@ -164,6 +210,7 @@ function render(state) {
   const topLimit = Number.isFinite(state.showTopFiles) ? state.showTopFiles : 15;
   renderFiles(state.workspaceReport, topLimit);
   renderCurrentFile(state.scriptReport);
+  renderSuggestions(state.scriptSuggestions);
 
   el.updatedAt.textContent = `Last update: ${new Date(state.updatedAtIso).toLocaleString()}`;
   el.autoRefreshState.textContent = state.autoRefreshActive
@@ -181,7 +228,7 @@ el.scanCurrentFile.addEventListener("click", () => {
   vscode.postMessage({ type: "scanCurrentFile" });
 });
 
-for (const checkbox of [el.showSummary, el.showStability, el.showFiles, el.showCurrentFile]) {
+for (const checkbox of [el.showSummary, el.showStability, el.showFiles, el.showCurrentFile, el.showSuggestions]) {
   checkbox.addEventListener("change", applyVisibility);
 }
 

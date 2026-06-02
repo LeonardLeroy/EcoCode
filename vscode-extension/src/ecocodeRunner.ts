@@ -4,7 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import * as vscode from "vscode";
-import { CollectorType, EcoCodeRepoReport, EcoCodeScriptReport } from "./types";
+import {
+  CollectorType,
+  EcoCodePatchReport,
+  EcoCodeRepoReport,
+  EcoCodeScriptReport,
+  EcoCodeSuggestReport,
+} from "./types";
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +26,15 @@ interface ExtensionSettings {
   showTopFiles: number;
   liveModeEnabled: boolean;
   liveScope: "workspace" | "file" | "both";
+  diagnosticsEnabled: boolean;
+  timeoutSeconds: number;
+  installSource: string;
+}
+
+let runnerLogger: ((message: string) => void) | undefined;
+
+export function setRunnerLogger(logger: (message: string) => void): void {
+  runnerLogger = logger;
 }
 
 function ensureNumber(value: unknown, fallback: number): number {
@@ -50,6 +65,9 @@ export function loadSettings(): ExtensionSettings {
     showTopFiles: Math.max(1, ensureNumber(config.get("showTopFiles"), 15)),
     liveModeEnabled: config.get<boolean>("liveModeEnabled", true),
     liveScope: config.get<"workspace" | "file" | "both">("liveScope", "both"),
+    diagnosticsEnabled: config.get<boolean>("diagnosticsEnabled", true),
+    timeoutSeconds: Math.max(5, ensureNumber(config.get("timeoutSeconds"), 120)),
+    installSource: config.get<string>("installSource", "git+https://github.com/LeonardLeroy/EcoCode.git"),
   };
 }
 
@@ -156,23 +174,37 @@ function parseJsonFromOutput(output: string): unknown {
 }
 
 async function runEcoCode(cliPath: string, args: string[], cwd: string): Promise<string> {
+  const timeoutSeconds = loadSettings().timeoutSeconds;
   try {
     const target = await resolveExecutionTarget(cliPath, cwd);
     const { stdout, stderr } = await execFileAsync(target.command, [...target.baseArgs, ...args], {
       cwd,
-      timeout: 120000,
+      timeout: timeoutSeconds * 1000,
       maxBuffer: 5 * 1024 * 1024,
       windowsHide: true,
     });
     if (stderr && stderr.trim().length > 0) {
-      // EcoCode may print non-fatal info on stderr in some environments.
+      // Non-fatal diagnostics from the CLI are useful for troubleshooting.
+      runnerLogger?.(`EcoCode stderr: ${stderr.trim()}`);
     }
     return stdout;
   } catch (error) {
-    const maybe = error as { stdout?: string; stderr?: string; message?: string; code?: string };
+    const maybe = error as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+      code?: string;
+      killed?: boolean;
+      signal?: string;
+    };
     if (maybe.code === "ENOENT") {
       throw new Error(
         `EcoCode CLI not found. Run EcoCode: Setup CLI once to install it globally at ${getGlobalCliPath()} or set ecocode.cliPath to a valid executable path.`,
+      );
+    }
+    if (maybe.killed || maybe.signal === "SIGTERM") {
+      throw new Error(
+        `EcoCode timed out after ${timeoutSeconds}s. Increase ecocode.timeoutSeconds or reduce ecocode.maxFiles for large workspaces.`,
       );
     }
     const details = (maybe.stderr || maybe.stdout || maybe.message || "Unknown EcoCode execution error").trim();
@@ -230,4 +262,39 @@ export async function profileScript(scriptPath: string, workspacePath: string): 
   const stdout = await runEcoCode(settings.cliPath, args, workspacePath);
   const parsed = parseJsonFromOutput(stdout);
   return parsed as EcoCodeScriptReport;
+}
+
+export async function getOptimizationSuggestions(
+  scriptPath: string,
+  workspacePath: string,
+  includeLlm = false,
+): Promise<EcoCodeSuggestReport> {
+  const settings = loadSettings();
+  const args = ["optimize", "suggest", scriptPath, "--json"];
+  if (!includeLlm) {
+    // Keep editor diagnostics fast and deterministic; LLM stays opt-in.
+    args.push("--no-llm");
+  }
+  const stdout = await runEcoCode(settings.cliPath, args, workspacePath);
+  const parsed = parseJsonFromOutput(stdout);
+  return parsed as EcoCodeSuggestReport;
+}
+
+export async function generateOptimizationPatch(
+  scriptPath: string,
+  ruleId: string | undefined,
+  workspacePath: string,
+  useLlm: boolean,
+): Promise<EcoCodePatchReport> {
+  const settings = loadSettings();
+  const args = ["optimize", "patch", scriptPath, "--overwrite", "--json"];
+  if (ruleId) {
+    args.push("--rule-id", ruleId);
+  }
+  if (useLlm) {
+    args.push("--use-llm");
+  }
+  const stdout = await runEcoCode(settings.cliPath, args, workspacePath);
+  const parsed = parseJsonFromOutput(stdout);
+  return parsed as EcoCodePatchReport;
 }

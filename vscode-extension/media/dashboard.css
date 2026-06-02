@@ -198,3 +198,62 @@ th {
 .hidden {
   display: none;
 }
+
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.badge-measured {
+  background: rgba(46, 160, 67, 0.2);
+  color: var(--accent, #2ea043);
+}
+
+.badge-estimated {
+  background: rgba(187, 128, 9, 0.2);
+  color: #bb8009;
+}
+
+.badge-synthetic {
+  background: rgba(110, 118, 129, 0.25);
+  color: #8b949e;
+}
+
+.badge-impact-high {
+  background: rgba(248, 81, 73, 0.2);
+  color: var(--danger, #f85149);
+}
+
+.badge-impact-medium {
+  background: rgba(187, 128, 9, 0.2);
+  color: #bb8009;
+}
+
+.badge-impact-low {
+  background: rgba(110, 118, 129, 0.25);
+  color: #8b949e;
+}
+
+.suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-list li {
+  border-left: 3px solid var(--accent, #2ea043);
+  padding-left: 10px;
+}
+
+.suggestion-why {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin-top: 2px;
+}

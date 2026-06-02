@@ -31,6 +31,7 @@ export function getDashboardHtml(webview: vscode.Webview, extensionUri: vscode.U
     <label><input type="checkbox" id="showStability" checked /> Stability</label>
     <label><input type="checkbox" id="showFiles" checked /> Top Files</label>
     <label><input type="checkbox" id="showCurrentFile" checked /> Current File</label>
+    <label><input type="checkbox" id="showSuggestions" checked /> Suggestions</label>
   </section>
 
   <section id="errorBox" class="card hidden"></section>
@@ -45,6 +46,11 @@ export function getDashboardHtml(webview: vscode.Webview, extensionUri: vscode.U
   </section>
 
   <section id="currentFileSection" class="card"></section>
+
+  <section id="suggestionsSection" class="card">
+    <h2>Optimization Suggestions (current file)</h2>
+    <div id="suggestionsWrapper"></div>
+  </section>
 
   <footer class="footer">
     <span id="updatedAt">No data yet</span>
