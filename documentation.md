@@ -1,3 +1,5 @@
+> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
+
 ## Table of Contents
 
 - [EcoCode](#ecocode)
@@ -65,10 +67,12 @@ Phase 1 has started with a first functional Python CLI prototype.
 - JSON outputs include `schemaVersion` for compatibility-safe evolution.
 - Optional run history persistence: `--save-run`
 - Config support via `ecocode.toml`
-- Scope: deterministic placeholder metrics, ready to be replaced by real runtime collectors
+- Three collectors: `static` (source-based estimate, never executes code — recommended for repository scans), `runtime` (real measurement by executing the file), and `placeholder` (synthetic deterministic values for demos/tests).
+- Every result is labelled with `measured` (boolean) and `method` (`runtime` / `static_estimate` / `placeholder`) so estimated figures are never mistaken for measurements.
 - Multi-language audit scope includes Python, C, C++, C#, Rust, JavaScript/TypeScript, HTML/CSS, and Assembly in repository scans.
 - Repository profiling is extension-based, so it can audit mixed-language repos even when runtime execution support is narrower than static scanning.
-- Runtime collection preview: `--collector runtime` (Linux/Windows; macOS deferred for now)
+- Repository scans are resilient: a file that cannot be measured falls back to a labelled static estimate instead of aborting the whole scan.
+- Runtime collection: `--collector runtime` (Linux/Windows; macOS deferred for now). Beyond Python, interpreted languages run through their interpreter on `PATH` (Node for `.js/.mjs/.cjs`, Ruby, PHP, Bash, Perl, Lua; `.ts` via `tsx`/`ts-node`).
 - Runtime collection sampling interval: `--sampling-interval <seconds>`
 - Repeated-run mode for stability analysis: `--runs <n>`
 - Linux runtime collector samples process groups to include subprocess activity.
@@ -84,22 +88,22 @@ The repository audit is extension-based, so it can already scan mixed-language r
 | Language | Repo audit | Runtime collector | Optimizer suggest | Notes |
 | --- | --- | --- | --- | --- |
 | Python | Yes | Yes | Yes | Strongest end-to-end support today. |
-| C | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
-| C++ | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
-| C# | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
-| Rust | Yes | Partial | Yes | Static audit + optimizer rules; runtime depends on executable form. |
-| JavaScript / TypeScript | Yes | Partial | Yes | Good for repo audits; runtime execution is not universal yet. |
+| JavaScript / TypeScript | Yes | Yes | Yes | Runtime via `node` (`.ts` via `tsx`/`ts-node`) when on `PATH`. |
+| Ruby | Yes | Yes | Yes | Runtime via `ruby` when on `PATH`. |
+| PHP | Yes | Yes | Yes | Runtime via `php` when on `PATH`. |
+| Shell | Yes | Yes | Yes | Runtime via `bash` when on `PATH`. |
+| C | Yes | Partial | Yes | Runtime only for an executable build; sources fall back to static estimate. |
+| C++ | Yes | Partial | Yes | Runtime only for an executable build; sources fall back to static estimate. |
+| C# | Yes | Partial | Yes | Runtime only for an executable build; sources fall back to static estimate. |
+| Rust | Yes | Partial | Yes | Runtime only for an executable build; sources fall back to static estimate. |
 | HTML / CSS | Yes | No | Yes | Static audit only; optimizer can still flag patterns. |
 | Assembly | Yes | No | Yes | Static audit only; useful for repository scans and rule-based advice. |
-| Java | Yes | Partial | Planned | Repo scans are covered; runtime/optimizer maturity can improve later. |
-| Go | Yes | Partial | Planned | Repo scans are covered; runtime maturity depends on executable packaging. |
-| Ruby | Yes | Partial | Planned | Repo scans are covered; runtime maturity depends on executable packaging. |
-| Shell | Yes | Partial | Planned | Useful for repo profiling and scripts; runtime may vary by environment. |
+| Java / Go | Yes | Partial | Planned | Repo scans are covered; runtime needs an executable build. |
 
 Legend:
 - `Yes`: supported in the current implementation.
-- `Partial`: supported in some cases, but not as a universal/runtime-native guarantee yet.
-- `No`: not a runtime target today, but still may be scanned as text if extension rules match.
+- `Partial`: only for an already-built executable; otherwise a labelled static estimate is used.
+- `No`: not a runtime target today, but still scanned statically when extension rules match.
 
 ## Features
 
@@ -191,6 +195,7 @@ Workflow:
 Examples:
 - `ecocode optimize suggest path/to/script.py`
 - `ecocode optimize suggest path/to/script.py --json`
+- `ecocode optimize suggest path/to/script.py --no-llm --json` (deterministic only, fast — used by the editor diagnostics)
 - `ecocode optimize suggest path/to/source.cpp --max-suggestions 5 --json`
 - `ecocode optimize patch path/to/script.py --json`
 - `ecocode optimize patch path/to/script.py --rule-id PY001 --output path/to/candidate.py --json`
@@ -198,15 +203,19 @@ Examples:
 - `ecocode optimize evaluate --baseline .ecocode/baseline.json --candidate path/to/candidate.py --json`
 
 Notes:
-- `optimize suggest` is deterministic today, so the same file yields the same rule hits.
+- Each suggestion includes an optional `line` (1-based) so editors can place inline diagnostics precisely.
+- `--no-llm` skips the model and returns deterministic suggestions only (the VS Code extension uses this for responsive squiggles).
+- `optimize suggest` is deterministic by default, so the same file yields the same rule hits.
 - `optimize patch` currently applies safe deterministic Python strategies (MVP scope).
 - `optimize patch --use-llm` can generate a local-model candidate patch when `[optimize.llm]` is enabled.
 - `optimize evaluate` compares candidate energy against the baseline median and applies stability gates.
 - The deterministic optimizer is the bridge to local LLMs later, because the validation path already exists.
 
-### Local LLM setup (Ollama)
+### LLM providers (local Ollama or remote API)
 
-To enable local-model suggestions in `optimize suggest`:
+The LLM layer augments the deterministic suggestions. It is **disabled by default**; the deterministic rules always run and are used as a graceful fallback if the model is unreachable or returns malformed output. Prompts include the detected language and the static findings already flagged, and responses are parsed robustly (code fences and surrounding prose are tolerated).
+
+**Local (Ollama):**
 
 1. Install Ollama.
 2. Pull a coding model (recommended first choice: `qwen2.5-coder:7b`).
@@ -221,15 +230,22 @@ max_suggestions = 3
 timeout_seconds = 20.0
 ```
 
-4. (Optional) Override the Ollama API base URL with an environment variable.
+4. (Optional) Override the Ollama API base URL: `export ECOCODE_OLLAMA_BASE_URL=https://ollama.example.com:11434` (default `http://127.0.0.1:11434`).
 
-Examples:
-- `export ECOCODE_OLLAMA_BASE_URL=http://127.0.0.1:11434`
-- `export ECOCODE_OLLAMA_BASE_URL=https://ollama.example.com:11434`
+**Remote (Anthropic API):**
+
+```toml
+[optimize.llm]
+enabled = true
+provider = "anthropic"
+model = "claude-sonnet-4-6"
+api_key_env = "ECOCODE_LLM_API_KEY"
+```
+
+The API key is **only** read from the environment variable named by `api_key_env` (default `ECOCODE_LLM_API_KEY`); it is never stored in `ecocode.toml` or VS Code settings. Export it before running: `export ECOCODE_LLM_API_KEY=sk-...`.
 
 Notes:
-- Default URL is `http://127.0.0.1:11434`.
-- EcoCode appends provider paths automatically (`/api/generate`, `/api/tags`).
+- EcoCode appends provider paths automatically (`/api/generate`, `/api/tags` for Ollama).
 
 Model guidance:
 - There is no universal single best model for every machine and codebase.
