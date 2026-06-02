@@ -29,6 +29,7 @@ class ProjectConfig:
     optimize_llm_model: str = DEFAULT_LOCAL_LLM_MODEL
     optimize_llm_max_suggestions: int = 3
     optimize_llm_timeout_seconds: float = 20.0
+    optimize_llm_api_key_env: str = "ECOCODE_LLM_API_KEY"
 
 
 def _find_config_file(start_dir: Path) -> Path | None:
@@ -73,6 +74,9 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
     llm_model = str(optimize_llm.get("model", DEFAULT_LOCAL_LLM_MODEL)).strip()
     if not llm_model:
         llm_model = DEFAULT_LOCAL_LLM_MODEL
+    llm_api_key_env = str(optimize_llm.get("api_key_env", "ECOCODE_LLM_API_KEY")).strip()
+    if not llm_api_key_env:
+        llm_api_key_env = "ECOCODE_LLM_API_KEY"
 
     return ProjectConfig(
         project_root=config_file.parent,
@@ -101,4 +105,5 @@ def load_project_config(start_dir: Path | None = None) -> ProjectConfig:
         optimize_llm_model=llm_model,
         optimize_llm_max_suggestions=int(optimize_llm.get("max_suggestions", 3)),
         optimize_llm_timeout_seconds=float(optimize_llm.get("timeout_seconds", 20.0)),
+        optimize_llm_api_key_env=llm_api_key_env,
     )

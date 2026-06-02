@@ -51,6 +51,11 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         action="store_true",
         help="Output machine-readable JSON",
     )
+    suggest_parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Skip the local/remote LLM and return deterministic suggestions only",
+    )
     suggest_parser.set_defaults(handler=handle_suggest)
 
     patch_parser = optimize_subparsers.add_parser(
@@ -101,7 +106,7 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     )
     evaluate_parser.add_argument(
         "--collector",
-        choices=["placeholder", "runtime"],
+        choices=["placeholder", "runtime", "static"],
         default="placeholder",
         help="Collector backend to use (default: placeholder)",
     )
@@ -152,13 +157,16 @@ def handle_suggest(args: argparse.Namespace) -> int:
             max_suggestions=args.max_suggestions,
         )
 
-        if config.optimize_llm_enabled:
+        if config.optimize_llm_enabled and not getattr(args, "no_llm", False):
+            known_findings = [f"{item.rule_id} {item.title}" for item in suggestions]
             llm_suggestions = fetch_local_llm_suggestions(
                 script_path=script_path,
                 provider=config.optimize_llm_provider,
                 model=config.optimize_llm_model,
                 max_suggestions=min(args.max_suggestions, config.optimize_llm_max_suggestions),
                 timeout_seconds=config.optimize_llm_timeout_seconds,
+                known_findings=known_findings,
+                api_key_env=config.optimize_llm_api_key_env,
             )
             suggestions = merge_optimization_suggestions(
                 primary=suggestions,
@@ -186,6 +194,7 @@ def handle_suggest(args: argparse.Namespace) -> int:
                 "impact": item.impact,
                 "confidence": item.confidence,
                 "language": item.language,
+                "line": item.line,
             }
             for item in suggestions
         ],
@@ -209,8 +218,9 @@ def handle_suggest(args: argparse.Namespace) -> int:
         return 0
 
     for index, item in enumerate(suggestions, start=1):
+        location = f" | Line: {item.line}" if item.line is not None else ""
         print(f"{index}. [{item.rule_id}] {item.title}")
-        print(f"   Impact: {item.impact} | Confidence: {item.confidence} | Language: {item.language}")
+        print(f"   Impact: {item.impact} | Confidence: {item.confidence} | Language: {item.language}{location}")
         print(f"   Why: {item.rationale}")
 
     return 0
@@ -246,6 +256,7 @@ def handle_patch(args: argparse.Namespace) -> int:
                 provider=config.optimize_llm_provider,
                 model=config.optimize_llm_model,
                 timeout_seconds=config.optimize_llm_timeout_seconds,
+                api_key_env=config.optimize_llm_api_key_env,
             )
             if candidate_source.strip() == original_source.strip():
                 print("Local LLM produced no source change")

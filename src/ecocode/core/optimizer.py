@@ -15,6 +15,21 @@ class OptimizationSuggestion:
     impact: str
     confidence: float
     language: str
+    line: int | None = None
+
+
+def _line_of_match(source: str, needle: str, *, regex: bool = False) -> int | None:
+    """Return the 1-based line of the first match, or None when absent."""
+    if regex:
+        match = re.search(needle, source)
+        if match is None:
+            return None
+        return source.count("\n", 0, match.start()) + 1
+
+    index = source.find(needle)
+    if index < 0:
+        return None
+    return source.count("\n", 0, index) + 1
 
 
 @dataclass(slots=True)
@@ -481,6 +496,7 @@ def _generic_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="low",
                 confidence=0.55,
                 language=language,
+                line=_line_of_match(source, "TODO"),
             )
         )
 
@@ -499,6 +515,7 @@ def _python_rules(source: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.84,
                 language="python",
+                line=_line_of_match(source, r"for\s+\w+\s+in\s+range\(len\(", regex=True),
             )
         )
 
@@ -511,6 +528,7 @@ def _python_rules(source: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.78,
                 language="python",
+                line=_line_of_match(source, r"\+\=\s*['\"]", regex=True),
             )
         )
 
@@ -523,6 +541,7 @@ def _python_rules(source: str) -> list[OptimizationSuggestion]:
                 impact="high",
                 confidence=0.7,
                 language="python",
+                line=_line_of_match(source, "for "),
             )
         )
 
@@ -541,6 +560,7 @@ def _js_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.75,
                 language=language,
+                line=_line_of_match(source, "forEach("),
             )
         )
 
@@ -553,6 +573,7 @@ def _js_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.66,
                 language=language,
+                line=_line_of_match(source, r"new\s+Array\(\d+\)", regex=True),
             )
         )
 
@@ -571,6 +592,7 @@ def _native_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="high",
                 confidence=0.73,
                 language=language,
+                line=_line_of_match(source, r"for\s*\(", regex=True),
             )
         )
 
@@ -583,6 +605,7 @@ def _native_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.68,
                 language=language,
+                line=_line_of_match(source, r"malloc\(|new ", regex=True),
             )
         )
 
@@ -601,6 +624,7 @@ def _web_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="low",
                 confidence=0.71,
                 language=language,
+                line=_line_of_match(source, "style="),
             )
         )
 
@@ -613,6 +637,7 @@ def _web_rules(source: str, language: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.64,
                 language=language,
+                line=_line_of_match(source, "box-shadow"),
             )
         )
 
@@ -631,6 +656,7 @@ def _asm_rules(source: str) -> list[OptimizationSuggestion]:
                 impact="medium",
                 confidence=0.6,
                 language="assembly",
+                line=_line_of_match(source, r"(?i)mov", regex=True),
             )
         )
 
