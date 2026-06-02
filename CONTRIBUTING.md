@@ -1,5 +1,7 @@
 # Contributing to EcoCode
 
+> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
+
 Thanks for considering a contribution to EcoCode.
 
 If you encounter a bug, have an improvement idea, or want a new feature, feel free to open a discussion or submit a PR. All constructive contributions are welcome.

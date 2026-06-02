@@ -1,5 +1,7 @@
 # EcoCode
 
+> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
+
 Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
 
 [![EcoCode Insights logo](vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
