@@ -25,12 +25,14 @@ PROFILE_REPORT_SCHEMA: dict[str, Any] = {
     "properties": {
         "schemaVersion": {"type": "integer", "minimum": 1},
         "script": {"type": "string"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "cpu_seconds": {"type": "number"},
         "memory_mb": {"type": "number"},
         "estimated_energy_wh": {"type": "number"},
         "sustainability_score": {"type": "integer"},
+        "measured": {"type": "boolean"},
+        "method": {"type": "string"},
         "summary": {
             "type": "object",
             "required": [
@@ -95,7 +97,7 @@ BASELINE_FILE_SCHEMA: dict[str, Any] = {
     "properties": {
         "schemaVersion": {"type": "integer", "minimum": 1},
         "version": {"type": "integer"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "baseline": {
             "type": "object",
@@ -158,7 +160,7 @@ BASELINE_COMPARE_SCHEMA: dict[str, Any] = {
     "properties": {
         "schemaVersion": {"type": "integer", "minimum": 1},
         "baseline_path": {"type": "string"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "threshold_pct": {"type": "number"},
         "baseline_energy_wh": {"type": "number"},
@@ -201,6 +203,28 @@ BASELINE_COMPARE_SCHEMA: dict[str, Any] = {
 }
 
 
+REPO_FILE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "script",
+        "cpu_seconds",
+        "memory_mb",
+        "estimated_energy_wh",
+        "sustainability_score",
+    ],
+    "properties": {
+        "script": {"type": "string"},
+        "cpu_seconds": {"type": "number"},
+        "memory_mb": {"type": "number"},
+        "estimated_energy_wh": {"type": "number"},
+        "sustainability_score": {"type": "integer"},
+        "measured": {"type": "boolean"},
+        "method": {"type": "string"},
+    },
+    "additionalProperties": False,
+}
+
+
 REPO_REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": [
@@ -223,7 +247,7 @@ REPO_REPORT_SCHEMA: dict[str, Any] = {
     "properties": {
         "schemaVersion": {"type": "integer", "minimum": 1},
         "root": {"type": "string"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "total_files": {"type": "integer", "minimum": 0},
         "total_cpu_seconds": {"type": "number"},
@@ -271,7 +295,7 @@ REPO_REPORT_SCHEMA: dict[str, Any] = {
         },
         "files": {
             "type": "array",
-            "items": BASELINE_FILE_SCHEMA["properties"]["baseline"],
+            "items": REPO_FILE_SCHEMA,
         },
     },
     "additionalProperties": False,
@@ -344,7 +368,7 @@ BENCHMARK_REPORT_SCHEMA: dict[str, Any] = {
     "properties": {
         "schemaVersion": {"type": "integer", "minimum": 1},
         "fixtures_dir": {"type": "string"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "noise_profile": {"type": "string", "enum": ["idle", "warm", "cpu-bound"]},
         "runs": {"type": "integer", "minimum": 1},
         "max_energy_cv_pct": {"type": "number", "minimum": 0},
@@ -432,6 +456,7 @@ OPTIMIZE_SUGGEST_REPORT_SCHEMA: dict[str, Any] = {
                     "impact": {"type": "string", "enum": ["low", "medium", "high"]},
                     "confidence": {"type": "number"},
                     "language": {"type": "string"},
+                    "line": {"type": ["integer", "null"]},
                 },
                 "additionalProperties": False,
             },
@@ -465,7 +490,7 @@ OPTIMIZE_EVALUATE_REPORT_SCHEMA: dict[str, Any] = {
         "command": {"type": "string", "enum": ["optimize evaluate"]},
         "baseline_path": {"type": "string"},
         "candidate_path": {"type": "string"},
-        "collector": {"type": "string", "enum": ["placeholder", "runtime"]},
+        "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "threshold_pct": {"type": "number"},
         "baseline_energy_wh": {"type": "number"},

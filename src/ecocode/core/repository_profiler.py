@@ -99,6 +99,39 @@ def discover_profile_targets(
     return targets
 
 
+def _profile_target_resilient(
+    target: Path,
+    collector: CollectorType,
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+    sampling_interval_seconds: float,
+) -> ProfileResult:
+    """Profile a single file, never aborting the whole scan.
+
+    In runtime mode, files that cannot be executed (compiled sources, missing
+    interpreter, runtime error) fall back to a non-executing static estimate so
+    one bad file does not crash the repository scan.
+    """
+    try:
+        return profile_script(
+            target,
+            collector=collector,
+            cpu_energy_factor=cpu_energy_factor,
+            memory_energy_factor=memory_energy_factor,
+            sampling_interval_seconds=sampling_interval_seconds,
+        )
+    except (ValueError, RuntimeError):
+        if collector == "runtime":
+            return profile_script(
+                target,
+                collector="static",
+                cpu_energy_factor=cpu_energy_factor,
+                memory_energy_factor=memory_energy_factor,
+                sampling_interval_seconds=sampling_interval_seconds,
+            )
+        raise
+
+
 def profile_repository(
     root: Path,
     extensions: set[str] | None = None,
@@ -123,7 +156,7 @@ def profile_repository(
     )
 
     results = [
-        profile_script(
+        _profile_target_resilient(
             target,
             collector=collector,
             cpu_energy_factor=cpu_energy_factor,

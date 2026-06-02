@@ -56,9 +56,9 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     )
     parser.add_argument(
         "--collector",
-        choices=["placeholder", "runtime"],
+        choices=["placeholder", "runtime", "static"],
         default="placeholder",
-        help="Collector backend to use (default: placeholder)",
+        help="Collector backend: static (source estimate, no execution), placeholder (synthetic), runtime (executes each file)",
     )
     parser.add_argument(
         "--sampling-interval",
@@ -192,6 +192,8 @@ def handle(args: argparse.Namespace) -> int:
                 "memory_mb": entry.memory_mb,
                 "estimated_energy_wh": entry.estimated_energy_wh,
                 "sustainability_score": entry.sustainability_score,
+                "measured": entry.measured,
+                "method": entry.method,
             }
             for entry in result.results
         ],

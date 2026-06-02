@@ -15,6 +15,8 @@ PROFILE_KEYS = {
     "memory_mb",
     "estimated_energy_wh",
     "sustainability_score",
+    "measured",
+    "method",
 }
 
 
@@ -25,6 +27,9 @@ MEASUREMENT_KEYS = {
     "estimated_energy_wh",
     "sustainability_score",
 }
+
+
+REPO_FILE_KEYS = MEASUREMENT_KEYS | {"measured", "method"}
 
 
 REPO_KEYS = {
@@ -109,6 +114,7 @@ OPTIMIZE_SUGGEST_ITEM_KEYS = {
     "impact",
     "confidence",
     "language",
+    "line",
 }
 
 
@@ -220,7 +226,7 @@ def test_profile_repo_json_contract(tmp_path: Path, capsys) -> None:
 
     assert isinstance(payload["files"], list)
     if payload["files"]:
-        assert set(payload["files"][0].keys()) == MEASUREMENT_KEYS
+        assert set(payload["files"][0].keys()) == REPO_FILE_KEYS
 
 
 def test_trend_json_contract(tmp_path: Path, monkeypatch, capsys) -> None:

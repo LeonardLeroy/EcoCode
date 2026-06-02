@@ -4,6 +4,7 @@ import csv
 import hashlib
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -17,8 +18,22 @@ try:
 except ImportError:  # pragma: no cover - unavailable on Windows
     resource = None
 
-CollectorType = Literal["placeholder", "runtime"]
+CollectorType = Literal["placeholder", "runtime", "static"]
 DEFAULT_RUNTIME_SAMPLING_INTERVAL_SECONDS = 0.02
+
+# Interpreters used by the runtime collector to execute interpreted languages.
+# Compiled languages are not executed: they fall back to the static estimate.
+RUNTIME_INTERPRETERS: dict[str, str] = {
+    ".js": "node",
+    ".mjs": "node",
+    ".cjs": "node",
+    ".rb": "ruby",
+    ".php": "php",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".pl": "perl",
+    ".lua": "lua",
+}
 
 
 @dataclass(slots=True)
@@ -28,6 +43,8 @@ class ProfileResult:
     memory_mb: float
     estimated_energy_wh: float
     sustainability_score: int
+    measured: bool = True
+    method: str = "runtime"
 
 
 @dataclass(slots=True)
@@ -87,18 +104,92 @@ def _profile_placeholder(
         memory_mb=memory_mb,
         estimated_energy_wh=estimated_energy_wh,
         sustainability_score=score,
+        measured=False,
+        method="placeholder",
+    )
+
+
+def _count_source_metrics(source: str) -> tuple[int, int]:
+    """Return (source_lines, loop_count) using language-agnostic heuristics."""
+    sloc = 0
+    loops = 0
+    for raw_line in source.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        sloc += 1
+        if (
+            line.startswith(("for ", "for(", "while ", "while("))
+            or " for " in line
+            or ".forEach(" in line
+        ):
+            loops += 1
+    return sloc, loops
+
+
+def _profile_static_estimate(
+    script_path: Path,
+    cpu_energy_factor: float,
+    memory_energy_factor: float,
+) -> ProfileResult:
+    """Deterministic estimate derived from real source metrics (never executes code).
+
+    Unlike the placeholder collector, values correlate with code size and loop
+    density, and the result is clearly labelled as not measured.
+    """
+    source = script_path.read_text(encoding="utf-8", errors="replace")
+    sloc, loops = _count_source_metrics(source)
+
+    cpu_seconds = round(0.05 + sloc * 0.002 + loops * 0.05, 4)
+    memory_mb = round(15.0 + sloc * 0.05, 4)
+    estimated_energy_wh = _estimate_energy_wh(
+        cpu_seconds,
+        memory_mb,
+        cpu_energy_factor,
+        memory_energy_factor,
+    )
+    score = _compute_sustainability_score(cpu_seconds, memory_mb)
+
+    return ProfileResult(
+        script=str(script_path),
+        cpu_seconds=cpu_seconds,
+        memory_mb=memory_mb,
+        estimated_energy_wh=estimated_energy_wh,
+        sustainability_score=score,
+        measured=False,
+        method="static_estimate",
     )
 
 
 def _build_runtime_command(script_path: Path) -> list[str]:
-    if script_path.suffix.lower() == ".py":
+    suffix = script_path.suffix.lower()
+
+    if suffix == ".py":
         return [sys.executable, str(script_path)]
+
+    interpreter = RUNTIME_INTERPRETERS.get(suffix)
+    if interpreter is not None:
+        resolved = shutil.which(interpreter)
+        if resolved is None:
+            raise ValueError(
+                f"Runtime collector needs '{interpreter}' on PATH to run {suffix} files"
+            )
+        return [resolved, str(script_path)]
+
+    if suffix == ".ts":
+        for runner in ("tsx", "ts-node"):
+            resolved = shutil.which(runner)
+            if resolved is not None:
+                return [resolved, str(script_path)]
+        raise ValueError(
+            "Runtime collector needs 'tsx' or 'ts-node' on PATH to run .ts files"
+        )
 
     if script_path.is_file() and script_path.stat().st_mode & 0o111:
         return [str(script_path)]
 
     raise ValueError(
-        "Runtime collector supports Python scripts or executable files"
+        f"Runtime collector cannot execute {suffix or 'this'} file; use the static collector"
     )
 
 
@@ -541,6 +632,13 @@ def profile_script(
 
     if collector == "placeholder":
         return _profile_placeholder(
+            script_path,
+            cpu_energy_factor,
+            memory_energy_factor,
+        )
+
+    if collector == "static":
+        return _profile_static_estimate(
             script_path,
             cpu_energy_factor,
             memory_energy_factor,

@@ -26,9 +26,9 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
     parser.add_argument("script", help="Path to the script to profile")
     parser.add_argument(
         "--collector",
-        choices=["placeholder", "runtime"],
+        choices=["placeholder", "runtime", "static"],
         default="placeholder",
-        help="Collector backend to use (default: placeholder)",
+        help="Collector backend: runtime (real measurement), static (source estimate), placeholder (synthetic)",
     )
     parser.add_argument(
         "--json",
@@ -113,6 +113,8 @@ def handle(args: argparse.Namespace) -> int:
         "memory_mb": result.memory_mb,
         "estimated_energy_wh": result.estimated_energy_wh,
         "sustainability_score": result.sustainability_score,
+        "measured": result.measured,
+        "method": result.method,
     }
 
     if args.runs > 1:
