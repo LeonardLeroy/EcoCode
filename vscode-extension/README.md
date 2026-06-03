@@ -1,12 +1,42 @@
 # EcoCode Insights VS Code Extension
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
-
 EcoCode Insights is a VS Code extension that runs EcoCode CLI scans and displays repository performance, energy/runtime metrics in a dashboard.
 
 ## Demo
 
 ![EcoCode Insights demo](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/EcocodeGIF.gif)
+
+## Screenshots
+
+### Inline optimization suggestions
+
+Energy/performance issues are flagged as you type — inline diagnostics (squiggles) with severity by impact, plus a panel for the current file. Each suggestion carries its rule ID and line number.
+
+![Optimization suggestions and inline diagnostics](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/suggestions.png)
+
+### Workspace dashboard
+
+Totals, average sustainability score and the collector in use. Workspace scans use the safe `static` estimate by default (it never executes your files).
+
+![Workspace summary dashboard](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/dashboard.png)
+
+### Measured vs Estimated, per file
+
+Every file is clearly badged, so an estimate is never mistaken for a real measurement.
+
+![Top files with measured/estimated badges](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/top-files.png)
+
+### Current file at a glance
+
+CPU, memory, energy and sustainability score for the file you are editing, alongside the dashboard.
+
+![Current file metrics with estimated badge](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/current-file.png)
+
+### Run-to-run stability
+
+Repeated runs expose variability (coefficient of variation) so you can trust the numbers before gating on them.
+
+![Stability panel](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/stability.png)
 
 ## Important
 
