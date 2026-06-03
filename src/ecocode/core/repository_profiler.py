@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fnmatch
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -68,35 +69,33 @@ def discover_profile_targets(
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
 ) -> list[Path]:
-    targets: list[Path] = []
     include_patterns = include_globs or []
     exclude_patterns = exclude_globs or []
 
-    for path in sorted(root.rglob("*")):
-        if len(targets) >= max_files:
-            break
+    candidates: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [name for name in dirnames if name not in SKIP_DIR_NAMES]
 
-        if path.is_dir():
-            continue
+        for filename in filenames:
+            path = Path(dirpath) / filename
+            if path.suffix.lower() not in extensions:
+                continue
 
-        if any(part in SKIP_DIR_NAMES for part in path.parts):
-            continue
+            relative = path.relative_to(root).as_posix()
+            if include_patterns and not any(
+                fnmatch.fnmatch(relative, pattern) for pattern in include_patterns
+            ):
+                continue
 
-        relative = path.relative_to(root).as_posix()
-        if include_patterns and not any(
-            fnmatch.fnmatch(relative, pattern) for pattern in include_patterns
-        ):
-            continue
+            if exclude_patterns and any(
+                fnmatch.fnmatch(relative, pattern) for pattern in exclude_patterns
+            ):
+                continue
 
-        if exclude_patterns and any(
-            fnmatch.fnmatch(relative, pattern) for pattern in exclude_patterns
-        ):
-            continue
+            candidates.append(path)
 
-        if path.suffix.lower() in extensions:
-            targets.append(path)
-
-    return targets
+    candidates.sort()
+    return candidates[:max_files]
 
 
 def _profile_target_resilient(

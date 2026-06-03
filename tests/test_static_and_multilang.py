@@ -8,7 +8,7 @@ from ecocode.core.profiler import (
     _build_runtime_command,
     profile_script,
 )
-from ecocode.core.repository_profiler import profile_repository
+from ecocode.core.repository_profiler import discover_profile_targets, profile_repository
 
 
 def test_static_collector_is_unmeasured_and_deterministic(tmp_path: Path) -> None:
@@ -85,3 +85,18 @@ def test_repo_runtime_falls_back_to_static_for_unrunnable_files(tmp_path: Path) 
     assert by_name["lib.c"].method == "static_estimate"
     # The whole scan did not crash and still counts both files.
     assert result.total_files == 2
+
+
+def test_discovery_prunes_ignored_directories(tmp_path: Path) -> None:
+    (tmp_path / "app.py").write_text("print('ok')\n", encoding="utf-8")
+    heavy = tmp_path / "node_modules" / "dep"
+    heavy.mkdir(parents=True)
+    (heavy / "ignored.py").write_text("print('skip me')\n", encoding="utf-8")
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    (git_dir / "hook.py").write_text("print('skip me too')\n", encoding="utf-8")
+
+    targets = discover_profile_targets(tmp_path, extensions={".py"}, max_files=50)
+    names = {path.name for path in targets}
+
+    assert names == {"app.py"}
