@@ -684,10 +684,14 @@ Interpretation:
 ### Install from PyPI (users)
 
 ```bash
-pip install ecocode-cli
+pipx install ecocode-cli
 ```
 
-This provides the `ecocode` command (Python 3.10+). The PyPI distribution is named `ecocode-cli`; the command and import package stay `ecocode`.
+This provides the `ecocode` command on your PATH (Python 3.10+). The PyPI distribution is named `ecocode-cli`; the command and import package stay `ecocode`.
+
+No pipx? `sudo apt install pipx` (Debian/Ubuntu) or `python3 -m pip install --user pipx`, then `pipx ensurepath`. Or use a virtual environment: `python3 -m venv .venv && .venv/bin/pip install ecocode-cli`.
+
+> On Debian/Ubuntu/WSL, a plain `pip install` into the system Python fails with `externally-managed-environment` (PEP 668). Use pipx or a venv — this is expected, not a packaging bug.
 
 ### Install from source (contributors)
 

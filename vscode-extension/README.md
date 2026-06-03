@@ -38,12 +38,14 @@ Repeated runs expose variability (coefficient of variation) so you can trust the
 
 The extension is a UI on top of the **EcoCode CLI** (a Python package). Install the CLI once — either:
 
-- **One click:** run the command **EcoCode: Setup CLI In Workspace** (or click *Setup CLI* when prompted). It runs `pip install ecocode-cli` for you.
-- **Manually:**
+- **One click:** run **EcoCode: Setup CLI In Workspace** (or click *Setup CLI* when prompted). It installs the CLI into a dedicated virtual environment for you (no PEP 668 issues).
+- **Manually with pipx:**
 
   ```bash
-  pip install ecocode-cli
+  pipx install ecocode-cli
   ```
+
+  (No pipx? `sudo apt install pipx` or `python3 -m pip install --user pipx`, then `pipx ensurepath`.) On Debian/Ubuntu/WSL, a plain `pip install` into the system Python is blocked by PEP 668 — use pipx or a venv.
 
 Requires **Python 3.10+**. If the CLI is installed in a custom location, set `ecocode.cliPath` to its absolute path. Repo: https://github.com/LeonardLeroy/EcoCode
 

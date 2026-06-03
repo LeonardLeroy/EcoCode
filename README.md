@@ -23,10 +23,14 @@ Inline optimization suggestions (squiggles + code actions), a workspace dashboar
 ## Install
 
 ```bash
-pip install ecocode-cli
+pipx install ecocode-cli
 ```
 
-This installs the `ecocode` command (Python 3.10+). A few examples:
+pipx installs the `ecocode` command on your PATH in an isolated environment (Python 3.10+). No pipx yet? `sudo apt install pipx` (Debian/Ubuntu) or `python3 -m pip install --user pipx`, then `pipx ensurepath`. Alternatively, install into a virtual environment: `python3 -m venv .venv && .venv/bin/pip install ecocode-cli`.
+
+> On Debian/Ubuntu/WSL, a plain `pip install` into the system Python is blocked by PEP 668 — use pipx or a venv.
+
+A few examples:
 
 ```bash
 ecocode profile path/to/script.py            # profile a single file
