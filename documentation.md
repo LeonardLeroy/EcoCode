@@ -1,5 +1,3 @@
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
-
 ## Table of Contents
 
 - [EcoCode](#ecocode)

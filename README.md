@@ -1,7 +1,5 @@
 # EcoCode
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
-
 Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
 
 [![EcoCode Insights logo](vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
@@ -9,6 +7,20 @@ Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace
 [![EcoCode Insights demo GIF](vscode-extension/media/EcocodeGIF.gif)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
 
 EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
+
+## In action
+
+Inline optimization suggestions (squiggles + code actions), a workspace dashboard, and honest "measured vs estimated" labels.
+
+![Optimization suggestions and inline diagnostics](vscode-extension/media/screenshots/suggestions.png)
+
+![Workspace summary dashboard](vscode-extension/media/screenshots/dashboard.png)
+
+![Top files with measured/estimated badges](vscode-extension/media/screenshots/top-files.png)
+
+![Current file metrics](vscode-extension/media/screenshots/current-file.png)
+
+![Stability panel](vscode-extension/media/screenshots/stability.png)
 
 ## What this project is for?
 
