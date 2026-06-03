@@ -1,6 +1,5 @@
 # C++ Implementation Track
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
 
 This folder will host C++ probes and performance-focused integrations.
 

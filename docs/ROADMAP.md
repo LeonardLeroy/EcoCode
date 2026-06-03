@@ -1,6 +1,5 @@
 # EcoCode Roadmap
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
 
 ## Status Board
 

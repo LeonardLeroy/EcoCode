@@ -1,6 +1,5 @@
 # Rust Implementation Track
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
 
 This folder will host the Rust runtime collector and high-performance core.
 

@@ -1,6 +1,5 @@
 # Contributing to EcoCode
 
-> Note de synthèse Obsidian : [[Notes/projets/ecocode|EcoCode]]
 
 Thanks for considering a contribution to EcoCode.
 
