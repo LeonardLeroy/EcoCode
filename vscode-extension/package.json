@@ -92,8 +92,8 @@
         },
         "ecocode.installSource": {
           "type": "string",
-          "default": "git+https://github.com/LeonardLeroy/EcoCode.git",
-          "description": "Pip install source used by 'Setup CLI' (a PyPI name like 'ecocode', a git URL, or a local path)."
+          "default": "ecocode-cli",
+          "description": "Pip install source used by 'Setup CLI' (a PyPI name like 'ecocode-cli', a git URL, or a local path)."
         },
         "ecocode.collector": {
           "type": "string",

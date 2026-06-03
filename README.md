@@ -2,7 +2,7 @@
 
 Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
 
-[![EcoCode Insights logo](vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+[![EcoCode Insights logo](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
 
 EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
 
@@ -10,15 +10,31 @@ EcoCode is an open-source toolkit to measure the energy impact of your code, det
 
 Inline optimization suggestions (squiggles + code actions), a workspace dashboard, and honest "measured vs estimated" labels.
 
-![Optimization suggestions and inline diagnostics](vscode-extension/media/screenshots/suggestions.png)
+![Optimization suggestions and inline diagnostics](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/suggestions.png)
 
-![Workspace summary dashboard](vscode-extension/media/screenshots/dashboard.png)
+![Workspace summary dashboard](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/dashboard.png)
 
-![Top files with measured/estimated badges](vscode-extension/media/screenshots/top-files.png)
+![Top files with measured/estimated badges](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/top-files.png)
 
-![Current file metrics](vscode-extension/media/screenshots/current-file.png)
+![Current file metrics](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/current-file.png)
 
-![Stability panel](vscode-extension/media/screenshots/stability.png)
+![Stability panel](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/stability.png)
+
+## Install
+
+```bash
+pip install ecocode-cli
+```
+
+This installs the `ecocode` command (Python 3.10+). A few examples:
+
+```bash
+ecocode profile path/to/script.py            # profile a single file
+ecocode profile-repo --root .                # scan a whole repository
+ecocode optimize suggest path/to/script.py   # optimization suggestions
+```
+
+Prefer a GUI? Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode) — it drives the same CLI.
 
 ## What this project is for?
 
@@ -54,8 +70,16 @@ The goal is to become a reference platform for sustainable software engineering:
 - smarter optimization recommendations,
 - simpler integration into team workflows.
 
-## Quick note for local LLM users:
-- Ollama endpoint is configurable with `ECOCODE_OLLAMA_BASE_URL` (HTTP or HTTPS).
+## AI suggestions are optional
+
+EcoCode works fully offline with deterministic, rule-based suggestions — **no API key needed**. AI-powered suggestions are opt-in, configured in `ecocode.toml`:
+
+- **Local (Ollama):** a model runs on your machine; your code never leaves it; no key. The endpoint is configurable via `ECOCODE_OLLAMA_BASE_URL` (HTTP or HTTPS).
+- **Remote (Anthropic):** higher quality, but your source is sent to the API, so it needs **your own** key via the `ECOCODE_LLM_API_KEY` environment variable. The key is read **only** from the environment — never stored in `ecocode.toml`, VS Code settings, or the repository.
+
+```bash
+export ECOCODE_LLM_API_KEY="sk-ant-..."   # only needed for the remote provider
+```
 
 ## Full documentation
 

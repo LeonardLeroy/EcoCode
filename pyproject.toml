@@ -3,22 +3,45 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ecocode"
+name = "ecocode-cli"
 version = "0.2.0"
-description = "EcoCode core CLI for software energy profiling"
+description = "EcoCode — energy and performance profiler for source code (CLI core for the EcoCode VS Code extension)"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
   {name = "EcoCode Contributors"}
 ]
 license = {text = "MIT"}
+keywords = [
+  "energy",
+  "sustainability",
+  "green-software",
+  "green-it",
+  "performance",
+  "profiling",
+  "optimization",
+  "carbon",
+  "ci",
+]
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Environment :: Console",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Utilities",
 ]
+
+[project.urls]
+Homepage = "https://github.com/LeonardLeroy/EcoCode"
+Repository = "https://github.com/LeonardLeroy/EcoCode"
+Issues = "https://github.com/LeonardLeroy/EcoCode/issues"
 
 [project.scripts]
 ecocode = "ecocode.cli:main"

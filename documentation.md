@@ -681,6 +681,16 @@ Interpretation:
 
 ## Quick Start (Python Core)
 
+### Install from PyPI (users)
+
+```bash
+pip install ecocode-cli
+```
+
+This provides the `ecocode` command (Python 3.10+). The PyPI distribution is named `ecocode-cli`; the command and import package stay `ecocode`.
+
+### Install from source (contributors)
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS

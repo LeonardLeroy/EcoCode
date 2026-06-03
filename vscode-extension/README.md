@@ -34,10 +34,29 @@ Repeated runs expose variability (coefficient of variation) so you can trust the
 
 ![Stability panel](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/stability.png)
 
-## Important
+## Installation
 
-The extension requires EcoCode CLI to be available. If needed, set `ecocode.cliPath` to the absolute executable path.
-See this repo: https://github.com/LeonardLeroy/EcoCode
+The extension is a UI on top of the **EcoCode CLI** (a Python package). Install the CLI once — either:
+
+- **One click:** run the command **EcoCode: Setup CLI In Workspace** (or click *Setup CLI* when prompted). It runs `pip install ecocode-cli` for you.
+- **Manually:**
+
+  ```bash
+  pip install ecocode-cli
+  ```
+
+Requires **Python 3.10+**. If the CLI is installed in a custom location, set `ecocode.cliPath` to its absolute path. Repo: https://github.com/LeonardLeroy/EcoCode
+
+## AI suggestions are optional (no API key needed)
+
+EcoCode works **fully offline** with deterministic, rule-based suggestions — the inline squiggles need **no API key and no network**.
+
+AI-powered suggestions are an opt-in extra, configured in `ecocode.toml`:
+
+- **Local (Ollama):** `provider = "ollama"` — runs a model on your machine, your code never leaves it, **no key**.
+- **Remote (Anthropic):** `provider = "anthropic"` — higher quality, but your source is sent to the API, so it requires **your own** API key via the `ECOCODE_LLM_API_KEY` environment variable (never stored in settings or the repo).
+
+See the [project documentation](https://github.com/LeonardLeroy/EcoCode/blob/main/documentation.md) for details.
 
 ## Features
 
