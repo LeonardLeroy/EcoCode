@@ -448,6 +448,8 @@ Command:
 ecocode profile-repo --root . --ext .py --runs 3 --json
 ```
 
+Ignored directories (`node_modules`, `.git`, `.venv`, `dist`, `build`, `target`, …) are pruned during discovery, so scans stay fast even in large repositories. Discovery is capped by `--max-files` (default 50 on the CLI, 200 in the VS Code extension). When more matching files exist than the cap, the JSON reports `total_discovered` (all matching files) alongside `total_files` (the scanned subset), and the human output prints a "scanned X of Y files" note — totals then cover the scanned subset only. Raise `--max-files` (or `ecocode.maxFiles`) to scan more.
+
 Example JSON excerpt:
 
 ```json

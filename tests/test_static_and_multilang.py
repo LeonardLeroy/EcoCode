@@ -100,3 +100,13 @@ def test_discovery_prunes_ignored_directories(tmp_path: Path) -> None:
     names = {path.name for path in targets}
 
     assert names == {"app.py"}
+
+
+def test_repo_reports_total_discovered_when_truncated(tmp_path: Path) -> None:
+    for index in range(5):
+        (tmp_path / f"f{index}.py").write_text("print('x')\n", encoding="utf-8")
+
+    result = profile_repository(tmp_path, extensions={".py"}, max_files=2)
+
+    assert result.total_files == 2
+    assert result.total_discovered == 5

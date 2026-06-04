@@ -257,3 +257,14 @@ th {
   opacity: 0.85;
   margin-top: 2px;
 }
+
+#truncationBanner {
+  border-left: 3px solid #bb8009;
+  background: rgba(187, 128, 9, 0.12);
+  font-size: 0.85rem;
+}
+
+#truncationBanner button {
+  margin-left: 8px;
+  cursor: pointer;
+}

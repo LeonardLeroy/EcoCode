@@ -11,6 +11,7 @@ const el = {
   showCurrentFile: byId("showCurrentFile"),
   showSuggestions: byId("showSuggestions"),
   errorBox: byId("errorBox"),
+  truncationBanner: byId("truncationBanner"),
   summarySection: byId("summarySection"),
   stabilitySection: byId("stabilitySection"),
   filesSection: byId("filesSection"),
@@ -60,6 +61,24 @@ function renderMetrics(report) {
     <article class="metric"><h3>Average sustainability</h3><strong>${report.average_sustainability_score}/100</strong></article>
     <article class="metric"><h3>Collector</h3><strong>${report.collector}</strong></article>
   `;
+}
+
+function renderTruncation(report) {
+  const discovered = report && report.total_discovered;
+  if (!report || typeof discovered !== "number" || discovered <= report.total_files) {
+    el.truncationBanner.classList.add("hidden");
+    el.truncationBanner.innerHTML = "";
+    return;
+  }
+  el.truncationBanner.classList.remove("hidden");
+  el.truncationBanner.innerHTML =
+    `<strong>Partial scan:</strong> showing <strong>${report.total_files}</strong> of <strong>${discovered}</strong> matching files (file limit reached). ` +
+    `Totals below cover the scanned subset only. ` +
+    `<button id="increaseLimitBtn">Increase limit</button>`;
+  const button = byId("increaseLimitBtn");
+  if (button) {
+    button.addEventListener("click", () => vscode.postMessage({ type: "increaseMaxFiles" }));
+  }
 }
 
 function renderStability(report) {
@@ -205,6 +224,7 @@ function render(state) {
   el.errorBox.classList.toggle("error", !!state.lastError);
   el.errorBox.textContent = state.lastError || "";
 
+  renderTruncation(state.workspaceReport);
   renderMetrics(state.workspaceReport);
   renderStability(state.workspaceReport);
   const topLimit = Number.isFinite(state.showTopFiles) ? state.showTopFiles : 15;

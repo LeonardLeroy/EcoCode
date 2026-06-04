@@ -38,7 +38,7 @@ Repeated runs expose variability (coefficient of variation) so you can trust the
 
 The extension is a UI on top of the **EcoCode CLI** (a Python package). Install the CLI once — either:
 
-- **One click:** run **EcoCode: Setup CLI In Workspace** (or click *Setup CLI* when prompted). It installs the CLI into a dedicated virtual environment for you (no PEP 668 issues).
+- **One click:** run **EcoCode: Setup CLI In Workspace** (or click *Setup CLI* when prompted). It uses **pipx** when available, otherwise a dedicated virtual environment — PEP 668-safe on Linux/macOS/Windows, and the extension auto-detects either install.
 - **Manually with pipx:**
 
   ```bash
@@ -93,7 +93,7 @@ Workspace scans use the `static` collector by default: a source-based estimate t
 - `ecocode.diagnosticsEnabled`: show inline optimization suggestions while editing (default `true`).
 - `ecocode.timeoutSeconds`: max seconds per CLI invocation (default `120`).
 - `ecocode.installSource`: pip install source used by *Setup CLI* (PyPI name, git URL, or local path).
-- `ecocode.maxFiles`: max number of scanned files.
+- `ecocode.maxFiles`: max number of files scanned per workspace scan (default 200). Large repos are capped at this number; when the limit is reached the dashboard shows a "showing X of Y files" banner with a one-click **Increase limit** button. Raise it to scan more.
 - `ecocode.runs`: repeated runs for stability.
 - `ecocode.extensions`: optional extension filters.
 - `ecocode.includeGlobs`: optional include globs.

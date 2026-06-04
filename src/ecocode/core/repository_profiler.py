@@ -60,12 +60,12 @@ class RepoProfileResult:
     total_energy_wh: float
     average_sustainability_score: float
     results: list[ProfileResult]
+    total_discovered: int = 0
 
 
-def discover_profile_targets(
+def _discover_all_targets(
     root: Path,
     extensions: set[str],
-    max_files: int,
     include_globs: list[str] | None = None,
     exclude_globs: list[str] | None = None,
 ) -> list[Path]:
@@ -95,7 +95,17 @@ def discover_profile_targets(
             candidates.append(path)
 
     candidates.sort()
-    return candidates[:max_files]
+    return candidates
+
+
+def discover_profile_targets(
+    root: Path,
+    extensions: set[str],
+    max_files: int,
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
+) -> list[Path]:
+    return _discover_all_targets(root, extensions, include_globs, exclude_globs)[:max_files]
 
 
 def _profile_target_resilient(
@@ -146,13 +156,14 @@ def profile_repository(
         raise FileNotFoundError(f"Repository root not found: {root}")
 
     profile_extensions = extensions or DEFAULT_SCRIPT_EXTENSIONS
-    targets = discover_profile_targets(
+    all_targets = _discover_all_targets(
         root,
         profile_extensions,
-        max_files,
         include_globs=include_globs,
         exclude_globs=exclude_globs,
     )
+    total_discovered = len(all_targets)
+    targets = all_targets[:max_files]
 
     results = [
         _profile_target_resilient(
@@ -186,4 +197,5 @@ def profile_repository(
         total_energy_wh=total_energy_wh,
         average_sustainability_score=average_sustainability_score,
         results=results,
+        total_discovered=total_discovered,
     )

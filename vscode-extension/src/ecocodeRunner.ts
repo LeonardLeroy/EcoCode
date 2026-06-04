@@ -106,6 +106,14 @@ export function getGlobalPythonPath(): string {
   return path.join(root, "venv", "bin", "python");
 }
 
+export function getPipxCliPath(): string {
+  const binDir = process.env.PIPX_BIN_DIR?.trim() || path.join(os.homedir(), ".local", "bin");
+  if (process.platform === "win32") {
+    return path.join(binDir, "ecocode.exe");
+  }
+  return path.join(binDir, "ecocode");
+}
+
 interface EcoCodeExecutionTarget {
   command: string;
   baseArgs: string[];
@@ -130,6 +138,11 @@ async function resolveExecutionTarget(cliPath: string, cwd: string): Promise<Eco
   const globalCliPath = getGlobalCliPath();
   if (await exists(globalCliPath)) {
     return { command: globalCliPath, baseArgs: [] };
+  }
+
+  const pipxCli = getPipxCliPath();
+  if (await exists(pipxCli)) {
+    return { command: pipxCli, baseArgs: [] };
   }
 
   const unixCli = path.join(cwd, ".venv", "bin", "ecocode");

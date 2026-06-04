@@ -144,6 +144,10 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         await this.scanWorkspace();
         return;
       }
+      if (message?.type === "increaseMaxFiles") {
+        await vscode.commands.executeCommand("workbench.action.openSettings", "ecocode.maxFiles");
+        return;
+      }
       if (message?.type === "scanCurrentFile") {
         await this.scanCurrentFile();
       }
@@ -375,10 +379,9 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     const terminal = vscode.window.createTerminal({
       name: "EcoCode Setup",
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir(),
-      // Force PowerShell on Windows: the setup syntax below is PowerShell-specific
-      // and cmd.exe would fail on it.
-      shellPath: isWindows ? "powershell.exe" : undefined,
-      // HISTFILE only makes sense on POSIX shells.
+      // Force a predictable shell so the conditional setup syntax is reliable
+      // across user shells (zsh/fish on Unix, cmd.exe on Windows).
+      shellPath: isWindows ? "powershell.exe" : "/bin/bash",
       env: isWindows ? undefined : { HISTFILE: "/tmp/ecocode_setup_history" },
     });
 
@@ -387,29 +390,34 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     const venvPath = path.join(globalInstallRoot, "venv");
     const installSource = loadSettings().installSource;
 
+    // Strategy (both OSes): use pipx when available (isolated, on PATH, PEP 668-safe);
+    // otherwise create a dedicated venv. `-U` / `--force` make re-running upgrade the CLI.
     const setupCommand = isWindows
       ? [
-        `New-Item -ItemType Directory -Force -Path "${globalInstallRoot}" | Out-Null`,
-        // py launcher is preferred, but some installs only expose 'python'.
-        `if (Get-Command py -ErrorAction SilentlyContinue) { py -3 -m venv "${venvPath}" } else { python -m venv "${venvPath}" }`,
-        `& "${globalPythonPath}" -m pip install --upgrade pip`,
-        `& "${globalPythonPath}" -m pip install "${installSource}"`,
-      ].join("; ")
+        `if (Get-Command pipx -ErrorAction SilentlyContinue) {`,
+        `  pipx install --force "${installSource}"`,
+        `} else {`,
+        `  New-Item -ItemType Directory -Force -Path "${globalInstallRoot}" | Out-Null;`,
+        `  if (Get-Command py -ErrorAction SilentlyContinue) { py -3 -m venv "${venvPath}" } else { python -m venv "${venvPath}" };`,
+        `  & "${globalPythonPath}" -m pip install --upgrade pip;`,
+        `  & "${globalPythonPath}" -m pip install -U "${installSource}"`,
+        `}`,
+      ].join(" ")
       : [
-        `mkdir -p "${globalInstallRoot}"`,
-        `python3 -m venv "${venvPath}"`,
-        `"${globalPythonPath}" -m pip install --upgrade pip`,
-        `"${globalPythonPath}" -m pip install "${installSource}"`,
-      ].join(" && ");
+        `if command -v pipx >/dev/null 2>&1; then`,
+        `  pipx install --force "${installSource}";`,
+        `else`,
+        `  mkdir -p "${globalInstallRoot}";`,
+        `  python3 -m venv "${venvPath}" || python -m venv "${venvPath}";`,
+        `  "${globalPythonPath}" -m pip install --upgrade pip;`,
+        `  "${globalPythonPath}" -m pip install -U "${installSource}";`,
+        `fi`,
+      ].join(" ");
 
     terminal.show(true);
     terminal.sendText(setupCommand, true);
     vscode.window.showInformationMessage(
-      `EcoCode setup started in terminal. Global CLI will be installed at ${
-        isWindows
-          ? path.join(globalInstallRoot, "venv", "Scripts", "ecocode.exe")
-          : path.join(globalInstallRoot, "venv", "bin", "ecocode")
-      }.`,
+      "EcoCode setup started in the terminal. Once it finishes, run a scan — the extension auto-detects the CLI (pipx or the dedicated venv).",
     );
   }
 

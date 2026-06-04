@@ -250,6 +250,7 @@ REPO_REPORT_SCHEMA: dict[str, Any] = {
         "collector": {"type": "string", "enum": ["placeholder", "runtime", "static"]},
         "runs": {"type": "integer", "minimum": 1},
         "total_files": {"type": "integer", "minimum": 0},
+        "total_discovered": {"type": "integer", "minimum": 0},
         "total_cpu_seconds": {"type": "number"},
         "total_memory_mb": {"type": "number"},
         "total_energy_wh": {"type": "number"},

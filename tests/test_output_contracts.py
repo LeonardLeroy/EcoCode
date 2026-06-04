@@ -38,6 +38,7 @@ REPO_KEYS = {
     "collector",
     "runs",
     "total_files",
+    "total_discovered",
     "total_cpu_seconds",
     "total_memory_mb",
     "total_energy_wh",

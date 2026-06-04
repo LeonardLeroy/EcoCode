@@ -36,6 +36,8 @@ export function getDashboardHtml(webview: vscode.Webview, extensionUri: vscode.U
 
   <section id="errorBox" class="card hidden"></section>
 
+  <section id="truncationBanner" class="card hidden"></section>
+
   <section id="summarySection" class="grid"></section>
 
   <section id="stabilitySection" class="card"></section>

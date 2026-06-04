@@ -46,6 +46,7 @@ export interface EcoCodeRepoReport {
   collector: CollectorType;
   runs: number;
   total_files: number;
+  total_discovered?: number;
   total_cpu_seconds: number;
   total_memory_mb: number;
   total_energy_wh: number;

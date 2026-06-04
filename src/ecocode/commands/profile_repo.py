@@ -173,6 +173,7 @@ def handle(args: argparse.Namespace) -> int:
         "collector": args.collector,
         "runs": args.runs,
         "total_files": result.total_files,
+        "total_discovered": result.total_discovered,
         "total_cpu_seconds": result.total_cpu_seconds,
         "total_memory_mb": result.total_memory_mb,
         "total_energy_wh": result.total_energy_wh,
@@ -230,6 +231,11 @@ def handle(args: argparse.Namespace) -> int:
     print("EcoCode repository profile")
     print(f"Root:                     {result.root}")
     print(f"Files profiled:           {result.total_files}")
+    if result.total_discovered > result.total_files:
+        print(
+            f"Note: scanned {result.total_files} of {result.total_discovered} files "
+            f"(--max-files limit). Totals cover the scanned subset only."
+        )
     print(f"Total CPU time (s):       {result.total_cpu_seconds}")
     print(f"Total memory peak (MB):   {result.total_memory_mb}")
     print(f"Total estimated Wh:       {result.total_energy_wh}")
