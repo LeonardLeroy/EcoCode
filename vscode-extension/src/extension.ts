@@ -389,28 +389,29 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     const globalInstallRoot = getGlobalInstallRoot();
     const venvPath = path.join(globalInstallRoot, "venv");
     const installSource = loadSettings().installSource;
+    const gitFallback = "git+https://github.com/LeonardLeroy/EcoCode.git";
 
     // Strategy (both OSes): use pipx when available (isolated, on PATH, PEP 668-safe);
     // otherwise create a dedicated venv. `-U` / `--force` make re-running upgrade the CLI.
     const setupCommand = isWindows
       ? [
         `if (Get-Command pipx -ErrorAction SilentlyContinue) {`,
-        `  pipx install --force "${installSource}"`,
+        `  pipx install --force "${installSource}"; if ($LASTEXITCODE -ne 0) { pipx install --force "${gitFallback}" }`,
         `} else {`,
         `  New-Item -ItemType Directory -Force -Path "${globalInstallRoot}" | Out-Null;`,
         `  if (Get-Command py -ErrorAction SilentlyContinue) { py -3 -m venv "${venvPath}" } else { python -m venv "${venvPath}" };`,
         `  & "${globalPythonPath}" -m pip install --upgrade pip;`,
-        `  & "${globalPythonPath}" -m pip install -U "${installSource}"`,
+        `  & "${globalPythonPath}" -m pip install -U "${installSource}"; if ($LASTEXITCODE -ne 0) { & "${globalPythonPath}" -m pip install -U "${gitFallback}" }`,
         `}`,
       ].join(" ")
       : [
         `if command -v pipx >/dev/null 2>&1; then`,
-        `  pipx install --force "${installSource}";`,
+        `  pipx install --force "${installSource}" || pipx install --force "${gitFallback}";`,
         `else`,
         `  mkdir -p "${globalInstallRoot}";`,
         `  python3 -m venv "${venvPath}" || python -m venv "${venvPath}";`,
         `  "${globalPythonPath}" -m pip install --upgrade pip;`,
-        `  "${globalPythonPath}" -m pip install -U "${installSource}";`,
+        `  "${globalPythonPath}" -m pip install -U "${installSource}" || "${globalPythonPath}" -m pip install -U "${gitFallback}";`,
         `fi`,
       ].join(" ");
 
