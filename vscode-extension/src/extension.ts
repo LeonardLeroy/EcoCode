@@ -6,6 +6,8 @@ import {
   generateOptimizationPatch,
   getGlobalInstallRoot,
   getGlobalPythonPath,
+  installCliHeadless,
+  isCliAvailable,
   loadSettings,
   profileScript,
   profileWorkspace,
@@ -24,6 +26,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
   private cliMissingPromptShown = false;
   private schemaWarningShown = false;
   private static readonly supportedSchemaVersion = 1;
+  private static readonly autoInstallFailedKey = "ecocode.autoInstallFailed";
   private readonly suggestionManager: EcoCodeSuggestionManager;
   //private dotTimer: NodeJS.Timeout | undefined;
 
@@ -374,6 +377,65 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
   }
 
+  /**
+   * Install the CLI on first activation so the user never has to run a scan,
+   * hit an error, and click through a prompt just to get a working extension.
+   * Runs detached from activate() so it can never delay extension startup.
+   */
+  async ensureCliInstalled(): Promise<void> {
+    const config = vscode.workspace.getConfiguration("ecocode");
+    if (!config.get<boolean>("autoInstallCli", true)) {
+      return;
+    }
+
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
+    if (await isCliAvailable(cwd)) {
+      this.log("EcoCode CLI detected.");
+      return;
+    }
+
+    // One failed attempt is informative; repeating it on every window is nagging.
+    if (this.context.globalState.get<boolean>(EcoCodeController.autoInstallFailedKey, false)) {
+      this.log("Skipping auto-install: a previous attempt failed. Run EcoCode: Setup CLI to retry.");
+      return;
+    }
+
+    this.log("EcoCode CLI not found. Installing in the background...");
+    try {
+      const result = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "EcoCode: installing CLI (one time)",
+          cancellable: true,
+        },
+        async (_progress, token) => installCliHeadless((message) => this.log(message), token),
+      );
+
+      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, false);
+      this.log(`EcoCode CLI installed via ${result.method} at ${result.cliPath}`);
+      vscode.window.showInformationMessage("EcoCode CLI is ready. Scans will run automatically.");
+
+      if (loadSettings().liveModeEnabled) {
+        this.startLiveMode();
+      }
+    } catch (error) {
+      const message = this.errorMessage(error);
+      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, true);
+      this.log(`Automatic CLI install failed: ${message}`);
+
+      const action = await vscode.window.showWarningMessage(
+        "EcoCode could not install its CLI automatically.",
+        "Setup in Terminal",
+        "Show Setup Guide",
+      );
+      if (action === "Setup in Terminal") {
+        await this.setupCliInWorkspace();
+      } else if (action === "Show Setup Guide") {
+        await this.showSetupGuide();
+      }
+    }
+  }
+
   async setupCliInWorkspace(): Promise<void> {
     const isWindows = process.platform === "win32";
     const terminal = vscode.window.createTerminal({
@@ -400,7 +462,6 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         `} else {`,
         `  New-Item -ItemType Directory -Force -Path "${globalInstallRoot}" | Out-Null;`,
         `  if (Get-Command py -ErrorAction SilentlyContinue) { py -3 -m venv "${venvPath}" } else { python -m venv "${venvPath}" };`,
-        `  & "${globalPythonPath}" -m pip install --upgrade pip;`,
         `  & "${globalPythonPath}" -m pip install -U "${installSource}"; if ($LASTEXITCODE -ne 0) { & "${globalPythonPath}" -m pip install -U "${gitFallback}" }`,
         `}`,
       ].join(" ")
@@ -410,7 +471,6 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         `else`,
         `  mkdir -p "${globalInstallRoot}";`,
         `  python3 -m venv "${venvPath}" || python -m venv "${venvPath}";`,
-        `  "${globalPythonPath}" -m pip install --upgrade pip;`,
         `  "${globalPythonPath}" -m pip install -U "${installSource}" || "${globalPythonPath}" -m pip install -U "${gitFallback}";`,
         `fi`,
       ].join(" ");
@@ -444,7 +504,6 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       "### Linux / macOS",
       "```bash",
       "python3 -m venv ~/.local/share/ecocode/venv",
-      "~/.local/share/ecocode/venv/bin/python -m pip install --upgrade pip",
       "~/.local/share/ecocode/venv/bin/python -m pip install ecocode-cli",
       "```",
       "",
@@ -778,6 +837,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     { dispose: () => controller.dispose() },
   );
+
+  // Detached on purpose: activation must not wait on the network.
+  void controller.ensureCliInstalled();
 }
 
 export function deactivate(): void {

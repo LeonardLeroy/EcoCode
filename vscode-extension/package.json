@@ -90,6 +90,11 @@
           "minimum": 5,
           "description": "Maximum seconds to wait for a single EcoCode CLI invocation before timing out."
         },
+        "ecocode.autoInstallCli": {
+          "type": "boolean",
+          "default": true,
+          "description": "Install the EcoCode CLI automatically in the background the first time the extension activates."
+        },
         "ecocode.installSource": {
           "type": "string",
           "default": "ecocode-cli",

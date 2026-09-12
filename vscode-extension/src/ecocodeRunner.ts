@@ -67,7 +67,7 @@ export function loadSettings(): ExtensionSettings {
     liveScope: config.get<"workspace" | "file" | "both">("liveScope", "both"),
     diagnosticsEnabled: config.get<boolean>("diagnosticsEnabled", true),
     timeoutSeconds: Math.max(5, ensureNumber(config.get("timeoutSeconds"), 120)),
-    installSource: config.get<string>("installSource", "git+https://github.com/LeonardLeroy/EcoCode.git"),
+    installSource: config.get<string>("installSource", "ecocode-cli"),
   };
 }
 
@@ -223,6 +223,146 @@ async function runEcoCode(cliPath: string, args: string[], cwd: string): Promise
     const details = (maybe.stderr || maybe.stdout || maybe.message || "Unknown EcoCode execution error").trim();
     throw new Error(details);
   }
+}
+
+export const GIT_INSTALL_FALLBACK = "git+https://github.com/LeonardLeroy/EcoCode.git";
+
+export interface CliInstallResult {
+  method: "pipx" | "venv";
+  cliPath: string;
+}
+
+async function commandResponds(command: string, args: string[]): Promise<boolean> {
+  try {
+    await execFileAsync(command, args, { timeout: 8000, windowsHide: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cheap presence check: look at the known install locations first and only fall
+ * back to spawning a process when none of them match.
+ */
+export async function isCliAvailable(cwd: string): Promise<boolean> {
+  const configured = loadSettings().cliPath.trim();
+  if (configured.length > 0 && configured !== "ecocode") {
+    return exists(configured);
+  }
+
+  const isWindows = process.platform === "win32";
+  const candidates = [
+    getGlobalCliPath(),
+    getPipxCliPath(),
+    isWindows
+      ? path.join(cwd, ".venv", "Scripts", "ecocode.exe")
+      : path.join(cwd, ".venv", "bin", "ecocode"),
+    isWindows
+      ? path.join(cwd, ".venv", "Scripts", "python.exe")
+      : path.join(cwd, ".venv", "bin", "python"),
+  ];
+
+  for (const candidate of candidates) {
+    if (await exists(candidate)) {
+      return true;
+    }
+  }
+
+  return commandResponds("ecocode", ["--version"]);
+}
+
+async function findSystemPython(): Promise<string[] | undefined> {
+  const candidates: string[][] = process.platform === "win32"
+    ? [["py", "-3"], ["python"], ["python3"]]
+    : [["python3"], ["python"]];
+
+  for (const candidate of candidates) {
+    if (await commandResponds(candidate[0], [...candidate.slice(1), "--version"])) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Install the CLI without opening a terminal.
+ *
+ * Order matters for speed: pipx reuses its own shared base and is PEP 668-safe,
+ * so it is tried first. The venv path deliberately skips `pip install -U pip`
+ * (a full extra download that buys nothing here) and forces wheels so pip never
+ * falls back to building a source distribution.
+ */
+export async function installCliHeadless(
+  log: (message: string) => void,
+  token?: vscode.CancellationToken,
+): Promise<CliInstallResult> {
+  const installSource = loadSettings().installSource.trim() || "ecocode-cli";
+  const sources = installSource === GIT_INSTALL_FALLBACK
+    ? [installSource]
+    : [installSource, GIT_INSTALL_FALLBACK];
+
+  const run = async (command: string, args: string[]): Promise<void> => {
+    if (token?.isCancellationRequested) {
+      throw new Error("EcoCode CLI installation cancelled.");
+    }
+    log(`$ ${command} ${args.join(" ")}`);
+    const { stdout, stderr } = await execFileAsync(command, args, {
+      timeout: 10 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024,
+      windowsHide: true,
+    });
+    const output = `${stdout ?? ""}${stderr ?? ""}`.trim();
+    if (output.length > 0) {
+      log(output);
+    }
+  };
+
+  const pipFlags = ["--disable-pip-version-check", "--no-input"];
+  const errors: string[] = [];
+
+  if (await commandResponds("pipx", ["--version"])) {
+    for (const source of sources) {
+      try {
+        await run("pipx", ["install", source]);
+        return { method: "pipx", cliPath: getPipxCliPath() };
+      } catch (error) {
+        errors.push(`pipx install ${source}: ${(error as Error).message}`);
+      }
+    }
+  }
+
+  const python = await findSystemPython();
+  if (!python) {
+    throw new Error(
+      `No Python 3.10+ interpreter found on PATH. Install Python, then run EcoCode: Setup CLI. (${errors.join(" | ")})`,
+    );
+  }
+
+  const venvPath = path.join(getGlobalInstallRoot(), "venv");
+  const venvPython = getGlobalPythonPath();
+
+  if (!(await exists(venvPython))) {
+    await run(python[0], [...python.slice(1), "-m", "venv", venvPath]);
+  }
+
+  for (const source of sources) {
+    // Wheel-only first: a source build is what makes a git install slow.
+    const attempts = [
+      [...pipFlags, "--only-binary=:all:", "-U", source],
+      [...pipFlags, "-U", source],
+    ];
+    for (const attempt of attempts) {
+      try {
+        await run(venvPython, ["-m", "pip", "install", ...attempt]);
+        return { method: "venv", cliPath: getGlobalCliPath() };
+      } catch (error) {
+        errors.push(`pip install ${source}: ${(error as Error).message}`);
+      }
+    }
+  }
+
+  throw new Error(`EcoCode CLI installation failed. ${errors.join(" | ")}`);
 }
 
 export async function profileWorkspace(rootPath: string): Promise<EcoCodeRepoReport> {
