@@ -146,8 +146,11 @@ def resolve_python() -> str:
     The repo is used from both Windows and WSL, and the interpreter that can run
     the script is not necessarily the one with the test dependencies installed.
     """
-    for relative in (("`.venv`", "bin", "python"), ("`.venv`", "Scripts", "python.exe")):
-        candidate = REPO_ROOT / ".venv" / relative[1] / relative[2]
+    candidates = (
+        REPO_ROOT / ".venv" / "bin" / "python",
+        REPO_ROOT / ".venv" / "Scripts" / "python.exe",
+    )
+    for candidate in candidates:
         if candidate.exists():
             return str(candidate)
     return sys.executable
@@ -258,7 +261,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.skip_tests:
         log("pytest skipped (--skip-tests)")
     else:
-        run([sys.executable, "-m", "pytest", "tests/", "-q"], cwd=REPO_ROOT)
+        python = resolve_python()
+        ensure_pytest(python)
+        run([python, "-m", "pytest", "tests/", "-q"], cwd=REPO_ROOT)
 
     run([node, str(TSC_ENTRY), "-p", ".", "--noEmit"], cwd=EXTENSION_DIR)
 
