@@ -210,7 +210,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "bump",
+        nargs="?",
         help=f"Extension version: one of {', '.join(BUMPS)}, or an explicit X.Y.Z.",
+    )
+    parser.add_argument(
+        "--repackage",
+        action="store_true",
+        help="Rebuild the current version instead of bumping (for packaging-only fixes).",
     )
     parser.add_argument(
         "--cli",
@@ -237,13 +243,20 @@ def main(argv: list[str] | None = None) -> int:
             )
     node = tool("node")
 
+    if args.repackage and args.bump:
+        raise ReleaseError("Pass either a bump or --repackage, not both.")
+    if not args.repackage and not args.bump:
+        raise ReleaseError(
+            f"Missing version bump: one of {', '.join(BUMPS)}, an explicit X.Y.Z, or --repackage."
+        )
+
     current_ext = read_extension_version()
-    target_ext = next_version(current_ext, args.bump)
+    target_ext = current_ext if args.repackage else next_version(current_ext, args.bump)
     current_cli = read_cli_version()
     target_cli = next_version(current_cli, args.cli) if args.cli else current_cli
 
     step("Plan")
-    log(f"extension : {current_ext} -> {target_ext}")
+    log(f"extension : {current_ext} -> {target_ext}" + ("   (repackage)" if args.repackage else ""))
     log(f"cli       : {current_cli} -> {target_cli}" + ("" if args.cli else "   (unchanged)"))
 
     if args.dry_run:
@@ -273,8 +286,11 @@ def main(argv: list[str] | None = None) -> int:
     step("Bump")
     original_ext_manifest = EXTENSION_MANIFEST.read_bytes()
     original_cli_manifest = CLI_MANIFEST.read_bytes()
-    set_extension_version(target_ext)
-    log(f"{EXTENSION_MANIFEST.relative_to(REPO_ROOT)} -> {target_ext}")
+    if args.repackage:
+        log(f"keeping {target_ext} (--repackage)")
+    else:
+        set_extension_version(target_ext)
+        log(f"{EXTENSION_MANIFEST.relative_to(REPO_ROOT)} -> {target_ext}")
     if args.cli:
         set_cli_version(target_cli)
         log(f"{CLI_MANIFEST.relative_to(REPO_ROOT)} -> {target_cli}")

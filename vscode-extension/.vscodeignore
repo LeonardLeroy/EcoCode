@@ -5,3 +5,8 @@
 **/src/**
 **/.eslintrc*
 **/*.map
+**/.gitignore
+.vscodeignore
+*.vsix
+**/*.tsbuildinfo
+media/screenshots/**
