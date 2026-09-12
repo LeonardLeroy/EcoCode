@@ -218,7 +218,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Workspace scan failed: ${message}`);
       if (showFeedback) {
-        await this.showScanError("workspace", message);
+        await this.showScanError("workspace", message, showFeedback);
       }
     } finally {
       //this.endScanningUI();
@@ -281,7 +281,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       this.state.updatedAtIso = new Date().toISOString();
       this.log(`Current file scan failed: ${message}`);
       if (showFeedback) {
-        await this.showScanError("file", message);
+        await this.showScanError("file", message, showFeedback);
       }
     } finally {
       //this.endScanningUI();
@@ -382,9 +382,11 @@ class EcoCodeController implements vscode.WebviewViewProvider {
    * hit an error, and click through a prompt just to get a working extension.
    * Runs detached from activate() so it can never delay extension startup.
    */
-  async ensureCliInstalled(): Promise<void> {
+  async ensureCliInstalled(force = false): Promise<void> {
     const config = vscode.workspace.getConfiguration("ecocode");
-    if (!config.get<boolean>("autoInstallCli", true)) {
+    // `force` is an explicit click on "Install Now": it overrides both the
+    // opt-out setting and the one-shot failure latch.
+    if (!force && !config.get<boolean>("autoInstallCli", true)) {
       return;
     }
 
@@ -395,7 +397,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     // One failed attempt is informative; repeating it on every window is nagging.
-    if (this.context.globalState.get<boolean>(EcoCodeController.autoInstallFailedKey, false)) {
+    if (!force && this.context.globalState.get<boolean>(EcoCodeController.autoInstallFailedKey, false)) {
       this.log("Skipping auto-install: a previous attempt failed. Run EcoCode: Setup CLI to retry.");
       return;
     }
@@ -423,12 +425,18 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, true);
       this.log(`Automatic CLI install failed: ${message}`);
 
+      // Surface the real cause: a generic notification leaves the user (and any
+      // bug report) with nothing to act on.
+      const summary = message.split(/\r?\n/)[0].slice(0, 200);
       const action = await vscode.window.showWarningMessage(
-        "EcoCode could not install its CLI automatically.",
+        `EcoCode could not install its CLI automatically: ${summary}`,
+        "Show Log",
         "Setup in Terminal",
         "Show Setup Guide",
       );
-      if (action === "Setup in Terminal") {
+      if (action === "Show Log") {
+        this.output.show(true);
+      } else if (action === "Setup in Terminal") {
         await this.setupCliInWorkspace();
       } else if (action === "Show Setup Guide") {
         await this.showSetupGuide();
@@ -773,22 +781,36 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
   }
 
-  private async showScanError(scope: "workspace" | "file", message: string): Promise<void> {
+  private async showScanError(
+    scope: "workspace" | "file",
+    message: string,
+    userInitiated = true,
+  ): Promise<void> {
     const label = scope === "workspace" ? "workspace" : "file";
     if (this.isCliMissingError(message)) {
       // Stop the live loop so it does not keep failing every interval until the CLI is installed.
       this.stopLiveMode(false);
-      if (this.cliMissingPromptShown) {
-        return;
+
+      // Only the background loop gets muted. Dismissing the notification once
+      // must never turn an explicit Scan click into a silent no-op.
+      if (!userInitiated) {
+        if (this.cliMissingPromptShown) {
+          return;
+        }
+        this.cliMissingPromptShown = true;
       }
-      this.cliMissingPromptShown = true;
+
       const action = await vscode.window.showWarningMessage(
         `EcoCode ${label} scan failed: CLI not found.`,
-        "Setup CLI",
+        "Install Now",
+        "Setup in Terminal",
         "Open Settings",
         "Show Setup Guide",
       );
-      if (action === "Setup CLI") {
+      if (action === "Install Now") {
+        await this.ensureCliInstalled(true);
+      }
+      if (action === "Setup in Terminal") {
         await this.setupCliInWorkspace();
       }
       if (action === "Open Settings") {

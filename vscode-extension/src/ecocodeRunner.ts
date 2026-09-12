@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
@@ -339,10 +339,13 @@ export async function installCliHeadless(
     );
   }
 
-  const venvPath = path.join(getGlobalInstallRoot(), "venv");
+  const installRoot = getGlobalInstallRoot();
+  const venvPath = path.join(installRoot, "venv");
   const venvPython = getGlobalPythonPath();
 
   if (!(await exists(venvPython))) {
+    // The terminal path does this explicitly; do not rely on venv creating parents.
+    await mkdir(installRoot, { recursive: true });
     await run(python[0], [...python.slice(1), "-m", "venv", venvPath]);
   }
 
