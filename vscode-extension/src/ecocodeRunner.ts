@@ -78,8 +78,10 @@ export function getGlobalInstallRoot(): string {
   }
 
   if (process.platform === "win32") {
-    const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
-    return path.join(appData, "EcoCode");
+    // Deliberately NOT under %APPDATA%: the Microsoft Store build of Python runs
+    // in an AppContainer that silently redirects writes there into its own
+    // LocalCache, so the venv lands somewhere we would never look again.
+    return path.join(os.homedir(), ".ecocode");
   }
 
   const xdgDataHome = process.env.XDG_DATA_HOME?.trim();
@@ -104,6 +106,15 @@ export function getGlobalPythonPath(): string {
     return path.join(root, "venv", "Scripts", "python.exe");
   }
   return path.join(root, "venv", "bin", "python");
+}
+
+/** Pre-0.2.9 install location, still honoured so existing setups keep working. */
+export function getLegacyGlobalCliPath(): string | undefined {
+  if (process.platform !== "win32") {
+    return undefined;
+  }
+  const appData = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+  return path.join(appData, "EcoCode", "venv", "Scripts", "ecocode.exe");
 }
 
 export function getPipxCliPath(): string {
@@ -138,6 +149,11 @@ async function resolveExecutionTarget(cliPath: string, cwd: string): Promise<Eco
   const globalCliPath = getGlobalCliPath();
   if (await exists(globalCliPath)) {
     return { command: globalCliPath, baseArgs: [] };
+  }
+
+  const legacyCliPath = getLegacyGlobalCliPath();
+  if (legacyCliPath && (await exists(legacyCliPath))) {
+    return { command: legacyCliPath, baseArgs: [] };
   }
 
   const pipxCli = getPipxCliPath();
@@ -254,6 +270,7 @@ export async function isCliAvailable(cwd: string): Promise<boolean> {
   const isWindows = process.platform === "win32";
   const candidates = [
     getGlobalCliPath(),
+    getLegacyGlobalCliPath(),
     getPipxCliPath(),
     isWindows
       ? path.join(cwd, ".venv", "Scripts", "ecocode.exe")
@@ -264,7 +281,7 @@ export async function isCliAvailable(cwd: string): Promise<boolean> {
   ];
 
   for (const candidate of candidates) {
-    if (await exists(candidate)) {
+    if (candidate && (await exists(candidate))) {
       return true;
     }
   }
@@ -347,6 +364,16 @@ export async function installCliHeadless(
     // The terminal path does this explicitly; do not rely on venv creating parents.
     await mkdir(installRoot, { recursive: true });
     await run(python[0], [...python.slice(1), "-m", "venv", venvPath]);
+
+    // `python -m venv` can exit 0 yet write elsewhere (Store Python redirection).
+    // Catch it here instead of emitting one ENOENT per pip attempt.
+    if (!(await exists(venvPython))) {
+      throw new Error(
+        `Created a virtual environment at ${venvPath} but ${venvPython} does not exist. ` +
+          "The Python interpreter redirected the write (common with the Microsoft Store build). " +
+          "Install Python from python.org, or install the CLI with: pipx install ecocode-cli",
+      );
+    }
   }
 
   for (const source of sources) {

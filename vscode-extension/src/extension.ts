@@ -377,6 +377,11 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
   }
 
+  private extensionVersion(): string {
+    const raw = (this.context.extension?.packageJSON as { version?: unknown } | undefined)?.version;
+    return typeof raw === "string" ? raw : "unknown";
+  }
+
   /**
    * Install the CLI on first activation so the user never has to run a scan,
    * hit an error, and click through a prompt just to get a working extension.
@@ -397,8 +402,13 @@ class EcoCodeController implements vscode.WebviewViewProvider {
     }
 
     // One failed attempt is informative; repeating it on every window is nagging.
-    if (!force && this.context.globalState.get<boolean>(EcoCodeController.autoInstallFailedKey, false)) {
-      this.log("Skipping auto-install: a previous attempt failed. Run EcoCode: Setup CLI to retry.");
+    // The latch is scoped to the version that failed, so an update — which may
+    // well contain the fix — always gets a fresh attempt.
+    const version = this.extensionVersion();
+    if (!force && this.context.globalState.get<string>(EcoCodeController.autoInstallFailedKey) === version) {
+      this.log(
+        `Skipping auto-install: it already failed in ${version}. Run EcoCode: Setup CLI to retry.`,
+      );
       return;
     }
 
@@ -413,7 +423,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
         async (_progress, token) => installCliHeadless((message) => this.log(message), token),
       );
 
-      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, false);
+      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, undefined);
       this.log(`EcoCode CLI installed via ${result.method} at ${result.cliPath}`);
       vscode.window.showInformationMessage("EcoCode CLI is ready. Scans will run automatically.");
 
@@ -422,7 +432,7 @@ class EcoCodeController implements vscode.WebviewViewProvider {
       }
     } catch (error) {
       const message = this.errorMessage(error);
-      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, true);
+      await this.context.globalState.update(EcoCodeController.autoInstallFailedKey, version);
       this.log(`Automatic CLI install failed: ${message}`);
 
       // Surface the real cause: a generic notification leaves the user (and any
