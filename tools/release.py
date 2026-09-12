@@ -151,7 +151,19 @@ def resolve_python() -> str:
         REPO_ROOT / ".venv" / "Scripts" / "python.exe",
     )
     for candidate in candidates:
-        if candidate.exists():
+        try:
+            # exists() raises on a WSL symlink seen from Windows, so guard it and
+            # then confirm the interpreter actually runs in *this* environment.
+            if not candidate.exists():
+                continue
+            probe = subprocess.run(
+                [str(candidate), "-c", ""],
+                capture_output=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if probe.returncode == 0:
             return str(candidate)
     return sys.executable
 
@@ -171,12 +183,27 @@ def ensure_pytest(python: str) -> None:
     if probe.returncode == 0:
         return
 
-    venv_python = "'.venv/bin/python'" if sys.platform != "win32" else r"'.venv\Scripts\python'"
+    relative = Path(python)
+    try:
+        relative = relative.relative_to(REPO_ROOT)
+    except ValueError:
+        pass
+
+    if str(relative).startswith(".venv"):
+        # The project venv exists but its dependencies were never installed.
+        fix = f"        {relative} -m pip install -e '.[dev]'"
+    else:
+        venv_python = (
+            ".venv/bin/python" if sys.platform != "win32" else r".venv\Scripts\python"
+        )
+        fix = (
+            f"        {python} -m venv .venv\n"
+            f"        {venv_python} -m pip install -e '.[dev]'"
+        )
+
     raise ReleaseError(
-        f"pytest is not installed for {python}.\n"
-        "    Set up a project environment once:\n"
-        f"        {python} -m venv .venv\n"
-        f"        {venv_python} -m pip install -e '.[dev]'\n"
+        f"pytest is not installed for {relative}.\n"
+        f"    Install the test dependencies:\n{fix}\n"
         "    Or skip the test run with --skip-tests."
     )
 
