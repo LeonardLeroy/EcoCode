@@ -26,7 +26,9 @@ PREFERRED_OLLAMA_MODELS = (
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
-DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6"
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+SUGGEST_MAX_TOKENS = 2048
+PATCH_MAX_TOKENS = 16384
 DEFAULT_LLM_API_KEY_ENV_VAR = "ECOCODE_LLM_API_KEY"
 
 
@@ -112,21 +114,30 @@ def _generate(
     model: str,
     timeout_seconds: float,
     api_key_env: str,
+    max_tokens: int = SUGGEST_MAX_TOKENS,
 ) -> str:
     if provider == "ollama":
-        return _generate_ollama(prompt, model, timeout_seconds)
+        return _generate_ollama(prompt, model, timeout_seconds, max_tokens)
     if provider == "anthropic":
-        return _generate_anthropic(prompt, model, timeout_seconds, api_key_env)
+        return _generate_anthropic(
+            prompt, model, timeout_seconds, api_key_env, max_tokens
+        )
     raise ValueError(f"Unsupported local LLM provider: {provider}")
 
 
-def _generate_ollama(prompt: str, model: str, timeout_seconds: float) -> str:
+def _generate_ollama(
+    prompt: str,
+    model: str,
+    timeout_seconds: float,
+    max_tokens: int = SUGGEST_MAX_TOKENS,
+) -> str:
     resolved_model = resolve_ollama_model(model, timeout_seconds=timeout_seconds)
     payload = {
         "model": resolved_model,
         "stream": False,
         "format": "json",
         "prompt": prompt,
+        "options": {"num_predict": max_tokens},
     }
     request = Request(
         _ollama_url("/api/generate"),
@@ -148,6 +159,7 @@ def _generate_anthropic(
     model: str,
     timeout_seconds: float,
     api_key_env: str,
+    max_tokens: int = SUGGEST_MAX_TOKENS,
 ) -> str:
     api_key = os.getenv(api_key_env, "").strip()
     if not api_key:
@@ -161,7 +173,7 @@ def _generate_anthropic(
 
     payload = {
         "model": model_id,
-        "max_tokens": 1024,
+        "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }
     request = Request(
@@ -179,6 +191,15 @@ def _generate_anthropic(
             response_payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"Failed to reach remote LLM provider: {exc}") from exc
+
+    if (
+        isinstance(response_payload, dict)
+        and response_payload.get("stop_reason") == "max_tokens"
+    ):
+        raise RuntimeError(
+            f"Remote LLM response was truncated at {max_tokens} tokens; "
+            "retry with a smaller source file or a larger token budget"
+        )
 
     parts = response_payload.get("content", []) if isinstance(response_payload, dict) else []
     if not isinstance(parts, list):
@@ -280,7 +301,12 @@ def fetch_local_llm_candidate_patch(
     prompt = _build_patch_prompt(source, language)
 
     raw_response = _generate(
-        normalized_provider, prompt, model, timeout_seconds, api_key_env
+        normalized_provider,
+        prompt,
+        model,
+        timeout_seconds,
+        api_key_env,
+        max_tokens=PATCH_MAX_TOKENS,
     )
     if not raw_response:
         raise ValueError("Local LLM returned an empty candidate patch response")
