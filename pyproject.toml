@@ -38,6 +38,11 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+]
+
 [project.urls]
 Homepage = "https://github.com/LeonardLeroy/EcoCode"
 Repository = "https://github.com/LeonardLeroy/EcoCode"

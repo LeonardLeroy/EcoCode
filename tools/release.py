@@ -157,14 +157,17 @@ def resolve_python() -> str:
 
 
 def ensure_pytest(python: str) -> None:
-    probe = subprocess.run(
-        [python, "-c", "import pytest"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        probe = subprocess.run(
+            [python, "-c", "import pytest"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError as exc:
+        raise ReleaseError(f"Cannot run {python}: {exc}") from exc
     if probe.returncode == 0:
         return
 
