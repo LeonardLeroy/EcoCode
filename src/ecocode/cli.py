@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
+from ecocode import __version__
 from ecocode.commands import baseline, benchmark, optimize, profile, profile_repo, trend
 
 
@@ -10,6 +11,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ecocode",
         description="EcoCode CLI - energy-aware engineering toolkit",
+    )
+    # Cheap, dependency-free liveness probe used by the VS Code extension.
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"ecocode {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command")
 
