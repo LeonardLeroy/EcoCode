@@ -1,24 +1,32 @@
 # EcoCode
 
-Try the VS Code extension on Marketplace: [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+[![PyPI](https://img.shields.io/pypi/v/ecocode-cli)](https://pypi.org/project/ecocode-cli/)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/ecocode.ecocode-vscode?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/ecocode-cli/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-[![EcoCode Insights logo](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/Ecocode.png)](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode)
+**For Python developers who want to know if their code got slower or greener — without guessing.** EcoCode profiles CPU, memory, and estimated energy per run, catches regressions against a baseline, and tells you which files to optimize first. Runs fully offline, no account, no API key.
 
-EcoCode is an open-source toolkit to measure the energy impact of your code, detect regressions, and guide more efficient optimizations.
+Prefer a GUI? [EcoCode Insights](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode) brings the same engine into VS Code as inline diagnostics and a dashboard.
 
 ## In action
 
-Inline optimization suggestions (squiggles + code actions), a workspace dashboard, and honest "measured vs estimated" labels.
+Inline optimization suggestions (squiggles + code actions), a workspace dashboard, and honest "measured vs estimated" labels — so a number is never mistaken for a guess.
 
 ![Optimization suggestions and inline diagnostics](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/suggestions.png)
+*Inline squiggles flag energy-costly patterns as you type, with one-click fixes.*
 
 ![Workspace summary dashboard](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/dashboard.png)
+*Whole-repo view: total estimated energy, trend, and where it's going.*
 
 ![Top files with measured/estimated badges](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/top-files.png)
+*Worst offenders ranked first, each tagged `measured` or `estimated` — never blended.*
 
 ![Current file metrics](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/current-file.png)
+*Per-file CPU, memory, and energy, updated as you edit.*
 
 ![Stability panel](https://raw.githubusercontent.com/LeonardLeroy/EcoCode/main/vscode-extension/media/screenshots/stability.png)
+*Run-to-run variance (CV%), so you know when a measurement is trustworthy enough to gate a PR on.*
 
 ## Install
 
@@ -38,9 +46,18 @@ ecocode profile-repo --root .                # scan a whole repository
 ecocode optimize suggest path/to/script.py   # optimization suggestions
 ```
 
-Prefer a GUI? Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=ecocode.ecocode-vscode) — it drives the same CLI.
+Output of `ecocode profile`:
 
-## What this project is for?
+```text
+EcoCode profile report
+Script:               /workspace/path/to/script.py
+CPU time (s):         1.84
+Memory peak (MB):     76.2
+Estimated energy Wh:  0.357
+Sustainability score: 90/100
+```
+
+## What EcoCode answers
 
 EcoCode helps answer very practical questions:
 - Is this script consuming more than before?
@@ -56,7 +73,7 @@ In practice, the CLI already lets you:
 - generate optimization suggestions,
 - export results for CI tooling (JSON/SARIF).
 
-## Why it is useful?
+## Why it matters
 
 The project makes an often invisible topic visible: the runtime cost of software.
 
@@ -66,13 +83,12 @@ In a team workflow, this makes it easier to:
 - add energy checks to CI the same way we already gate tests and linting,
 - improve performance and reliability without losing sight of sustainability.
 
-## Where we are going?
+## Why EcoCode
 
-The goal is to become a reference platform for sustainable software engineering:
-- increasingly reliable, cross-platform runtime measurement,
-- deeper repository analysis,
-- smarter optimization recommendations,
-- simpler integration into team workflows.
+- **Measured, not just estimated.** Every result is labelled `measured` or `estimated` (via `static_estimate`/`placeholder`), so a real runtime sample is never confused with a guess.
+- **Offline-first.** Profiling and rule-based suggestions run entirely on your machine — no account, no API key, no code leaving your laptop.
+- **Multi-language repo audits.** `profile-repo` covers Python, C/C++, C#, Rust, JS/TS, HTML/CSS, and Assembly, not just Python scripts.
+- **CI-native.** JSON and SARIF exports plug into the same gates you already use for tests and linting — see [docs/ROADMAP.md](docs/ROADMAP.md) for what's shipped and what's next.
 
 ## AI suggestions are optional
 
@@ -93,15 +109,4 @@ If you want full details (commands, outputs, examples, roadmap, etc.), see the c
 
 ## Contributing
 
-If the project interests you and you want to help:
-
-You can:
-- propose new features,
-- add new functionality,
-- fix potential issues and bugs,
-- improve the app's reliability,
-- submit pull requests.
-
-See also:
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [docs/ROADMAP.md](docs/ROADMAP.md)
+Found a bug, have an idea, or want to pick up a roadmap item? Open an issue or a PR — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the local quality gate, and the branch/commit conventions. [docs/ROADMAP.md](docs/ROADMAP.md) lists what's next if you want a concrete starting point.
